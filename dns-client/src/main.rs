@@ -6,8 +6,8 @@ fn main() {
 
     println!("Resolving {} via DNS {}\n\n", domain, dns_server);
 
-    let answers =
-        dns::resolver::resolve(&domain, &dns_server).expect("Error resolving DNS records");
+    let (answers, _) =
+        dns::resolver::resolve(&domain, &dns_server, None).expect("Error resolving DNS records");
 
     for answer in answers {
         match answer {

@@ -43,12 +43,12 @@ impl From<Flags> for u16 {
 }
 
 #[derive(Debug)]
-pub(crate) struct ResponseParser {
-    buf: Vec<u8>,
+pub(crate) struct DnsParser {
+    pub buf: Vec<u8>,
     position: usize,
 }
 
-impl ResponseParser {
+impl DnsParser {
     pub(crate) fn new(buf: Vec<u8>) -> Self {
         Self { buf, position: 0 }
     }
@@ -134,7 +134,7 @@ impl ResponseParser {
         self.take_bytes(1);
     }
 
-    pub(crate) fn parse_question(self: &mut ResponseParser) -> Question {
+    pub(crate) fn parse_question(self: &mut DnsParser) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
             r#type: self.take_bytes(2),
@@ -196,7 +196,7 @@ impl ResponseParser {
 
     pub(crate) fn parse_header(&mut self) -> Header {
         Header {
-            id: self.take_bytes(2),
+            id: self.take_bytes(2) as u16,
             flags: Flags::from(self.take_bytes(2) as u16),
             question_count: self.take_bytes(2),
             answer_count: self.take_bytes(2),
@@ -265,7 +265,7 @@ impl From<usize> for RecordType {
 
 #[derive(Debug)]
 pub(crate) struct Header {
-    pub(crate) id: usize,
+    pub(crate) id: u16,
     pub(crate) flags: Flags,
     pub(crate) question_count: usize,
     pub(crate) answer_count: usize,
@@ -274,10 +274,10 @@ pub(crate) struct Header {
 }
 
 #[derive(Debug)]
-pub(crate) struct Question {
-    domain_name: String,
-    r#type: usize,
-    class: usize,
+pub struct Question {
+    pub domain_name: String,
+    pub r#type: usize,
+    pub class: usize,
 }
 
 #[derive(Debug)]
@@ -308,18 +308,18 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use crate::dns::{encode_domain_name, Flags, ResponseParser};
+    use crate::dns::{encode_domain_name, DnsParser, Flags};
 
     #[test]
     fn test_response_parser_take() {
-        let mut parser = ResponseParser::new(vec![0x3, 0x2, 0x1]);
+        let mut parser = DnsParser::new(vec![0x3, 0x2, 0x1]);
         assert_eq!(parser.take_bytes(3), (0x3 << 16) | (0x2 << 8) | 0x1);
         assert_eq!(parser.buf.len(), 3);
     }
 
     #[test]
     fn test_response_parser_get() {
-        let parser = ResponseParser::new(vec![0x3, 0x2, 0x1]);
+        let parser = DnsParser::new(vec![0x3, 0x2, 0x1]);
         assert_eq!(parser.get::<3>(), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 3);
     }

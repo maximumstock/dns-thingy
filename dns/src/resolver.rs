@@ -1,10 +1,14 @@
-use crate::dns::{encode_domain_name, Answer, ResponseParser};
+use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
 
 use std::{net::UdpSocket, time::Duration};
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
-pub fn resolve(domain: &str, dns: &str) -> Result<Vec<Answer>, Box<dyn std::error::Error>> {
-    let request = generate_request(domain);
+pub fn resolve(
+    domain: &str,
+    dns: &str,
+    id: Option<u16>,
+) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error>> {
+    let request = generate_request(domain, id);
 
     let addr = (dns, 53);
     let socket = UdpSocket::bind(("0.0.0.0", 0))?;
@@ -15,7 +19,7 @@ pub fn resolve(domain: &str, dns: &str) -> Result<Vec<Answer>, Box<dyn std::erro
     let (datagram_size, _) = socket.recv_from(&mut buffer)?;
     buffer.truncate(datagram_size);
 
-    let mut parser = ResponseParser::new(buffer);
+    let mut parser = DnsParser::new(buffer);
     let header = parser.parse_header();
 
     for _ in 0..header.question_count {
@@ -28,15 +32,24 @@ pub fn resolve(domain: &str, dns: &str) -> Result<Vec<Answer>, Box<dyn std::erro
 
     assert!(parser.is_done());
 
-    Ok(answers)
+    Ok((answers, parser.buf))
+}
+
+pub fn parse_query(buf: Vec<u8>) -> Result<(u16, Question), Box<dyn std::error::Error>> {
+    let mut parser = DnsParser::new(buf);
+    let header = parser.parse_header();
+    Ok((header.id, parser.parse_question()))
 }
 
 /// Generates a DNS query for INternet A records
-pub(crate) fn generate_request(domain: &str) -> Vec<u8> {
+pub(crate) fn generate_request(domain: &str, id: Option<u16>) -> Vec<u8> {
+    let id = id
+        .map(|n| ((n >> 8) as u8, (n & 0xFF) as u8))
+        .unwrap_or((0x10, 0x01));
     const QTYPE: [u8; 2] = [0x00, 0x01];
     const QCLASS: [u8; 2] = [0x00, 0x01];
-    const REQUEST_HEADER: [u8; 12] = [
-        0x10, 0x01, // identification
+    let request_header: [u8; 12] = [
+        id.0, id.1, // identification
         0x01, 0x00, // flags
         0x00, 0x01, // question section
         0x00, 0x00, // answer section
@@ -44,7 +57,7 @@ pub(crate) fn generate_request(domain: &str) -> Vec<u8> {
         0x00, 0x00, // additional section
     ];
     let mut request = vec![];
-    request.extend(REQUEST_HEADER);
+    request.extend(request_header);
     request.extend(encode_domain_name(domain));
     request.extend(QTYPE);
     request.extend(QCLASS);
@@ -62,12 +75,12 @@ mod tests {
     #[test]
     fn test_resolve_a_records() {
         for dns_root in DNS_SERVERS {
-            let answers = resolve("www.example.com", dns_root).unwrap();
+            let (answers, _) = resolve("www.example.com", dns_root, None).unwrap();
             if let Some(Answer::A { ipv4, .. }) = answers.last() {
                 assert_eq!(&Ipv4Addr::new(93, 184, 216, 34), ipv4);
             }
 
-            let answers = resolve("www.maximumstock.net", dns_root).unwrap();
+            let (answers, _) = resolve("www.maximumstock.net", dns_root, None).unwrap();
             let expected = vec![Ipv4Addr::new(154, 53, 57, 10)];
 
             for answer in &answers {
