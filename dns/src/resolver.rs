@@ -67,19 +67,6 @@ mod tests {
                 assert_eq!(&Ipv4Addr::new(93, 184, 216, 34), ipv4);
             }
 
-            let answers = resolve("www.wonder.me", dns_root).unwrap();
-            let expected = vec![
-                Ipv4Addr::new(52, 49, 198, 28),
-                Ipv4Addr::new(52, 212, 43, 230),
-                Ipv4Addr::new(3, 248, 8, 137),
-            ];
-
-            for answer in &answers {
-                if let Answer::A { ipv4, .. } = answer {
-                    assert!(expected.contains(ipv4));
-                }
-            }
-
             let answers = resolve("www.maximumstock.net", dns_root).unwrap();
             let expected = vec![Ipv4Addr::new(154, 53, 57, 10)];
 
