@@ -1,6 +1,8 @@
 use std::net::Ipv4Addr;
 
-#[derive(Debug, Default, PartialEq, Eq)]
+use serde::Serialize;
+
+#[derive(Debug, Default, PartialEq, Eq, Serialize)]
 pub(crate) struct Flags {
     query: bool,
     opcode: u8,
@@ -40,6 +42,24 @@ impl From<Flags> for u16 {
         value |= flags.response_code as u16;
         value
     }
+}
+
+pub fn generate_nxdomain_response(id: u16) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let flags = Flags {
+        response_code: 3,
+        query: false,
+        ..Flags::default()
+    };
+
+    println!("{:?}", flags);
+
+    let header = Header {
+        id,
+        flags,
+        ..Header::default()
+    };
+
+    bincode::serialize(&header).map_err(|e| e.into())
 }
 
 #[derive(Debug)]
@@ -263,7 +283,7 @@ impl From<usize> for RecordType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Serialize)]
 pub(crate) struct Header {
     pub(crate) id: u16,
     pub(crate) flags: Flags,
@@ -271,6 +291,21 @@ pub(crate) struct Header {
     pub(crate) answer_count: usize,
     pub(crate) authority_count: usize,
     pub(crate) additional_count: usize,
+}
+
+impl From<Header> for Vec<u8> {
+    fn from(header: Header) -> Self {
+        let mut value = Vec::new();
+        value |= (if header.query { 0 } else { 1 }) << 15;
+        value |= (header.opcode as u16) << 11;
+        value |= (if header.authoritative_answer { 1 } else { 0 }) << 10;
+        value |= (if header.truncation { 1 } else { 0 }) << 9;
+        value |= (if header.recursion_desired { 1 } else { 0 }) << 8;
+        value |= (if header.recursion_available { 1 } else { 0 }) << 7;
+        value |= (header.z as u16) << 3;
+        value |= header.response_code as u16;
+        value
+    }
 }
 
 #[derive(Debug)]
