@@ -1,5 +1,7 @@
 # dns-thingy
 
+[![Continuous Integration](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml)
+
 An educational project to learn more about the Domain Name System.
 The goal is to build a minimal content filter system based on DNS similar to Adguard.
 
