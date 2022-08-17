@@ -70,7 +70,7 @@ mod tests {
 
     use super::{resolve, Answer};
 
-    const DNS_SERVERS: [&str; 2] = ["192.168.178.31", "1.1.1.1"];
+    const DNS_SERVERS: [&str; 1] = ["1.1.1.1"];
 
     #[test]
     fn test_resolve_a_records() {

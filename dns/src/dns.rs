@@ -1,8 +1,6 @@
 use std::net::Ipv4Addr;
 
-use serde::Serialize;
-
-#[derive(Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub(crate) struct Flags {
     query: bool,
     opcode: u8,
@@ -51,15 +49,13 @@ pub fn generate_nxdomain_response(id: u16) -> Result<Vec<u8>, Box<dyn std::error
         ..Flags::default()
     };
 
-    println!("{:?}", flags);
-
     let header = Header {
         id,
         flags,
         ..Header::default()
     };
 
-    bincode::serialize(&header).map_err(|e| e.into())
+    Ok(header.into())
 }
 
 #[derive(Debug)]
@@ -84,11 +80,10 @@ impl DnsParser {
     }
 
     fn peek_bytes(&self, n: usize) -> usize {
-        let out = self.buf[self.position..]
+        self.buf[self.position..]
             .iter()
             .take(n)
-            .fold(0usize, |acc, byte| acc << 8 | *byte as usize);
-        out
+            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
     }
 
     fn take(&mut self, n: usize) -> Vec<u8> {
@@ -218,10 +213,10 @@ impl DnsParser {
         Header {
             id: self.take_bytes(2) as u16,
             flags: Flags::from(self.take_bytes(2) as u16),
-            question_count: self.take_bytes(2),
-            answer_count: self.take_bytes(2),
-            authority_count: self.take_bytes(2),
-            additional_count: self.take_bytes(2),
+            question_count: self.take_bytes(2) as u16,
+            answer_count: self.take_bytes(2) as u16,
+            authority_count: self.take_bytes(2) as u16,
+            additional_count: self.take_bytes(2) as u16,
         }
     }
 }
@@ -283,27 +278,28 @@ impl From<usize> for RecordType {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub(crate) struct Header {
     pub(crate) id: u16,
     pub(crate) flags: Flags,
-    pub(crate) question_count: usize,
-    pub(crate) answer_count: usize,
-    pub(crate) authority_count: usize,
-    pub(crate) additional_count: usize,
+    pub(crate) question_count: u16,
+    pub(crate) answer_count: u16,
+    pub(crate) authority_count: u16,
+    pub(crate) additional_count: u16,
 }
 
 impl From<Header> for Vec<u8> {
     fn from(header: Header) -> Self {
         let mut value = Vec::new();
-        value |= (if header.query { 0 } else { 1 }) << 15;
-        value |= (header.opcode as u16) << 11;
-        value |= (if header.authoritative_answer { 1 } else { 0 }) << 10;
-        value |= (if header.truncation { 1 } else { 0 }) << 9;
-        value |= (if header.recursion_desired { 1 } else { 0 }) << 8;
-        value |= (if header.recursion_available { 1 } else { 0 }) << 7;
-        value |= (header.z as u16) << 3;
-        value |= header.response_code as u16;
+        // let mut buf = [0u8; 20];
+        // buf[0] = header.id.to_be_bytes()[0];
+        value.extend_from_slice(&header.id.to_be_bytes());
+        let raw_flags: u16 = header.flags.into();
+        value.extend_from_slice(&raw_flags.to_be_bytes());
+        value.extend_from_slice(&header.question_count.to_be_bytes());
+        value.extend_from_slice(&header.answer_count.to_be_bytes());
+        value.extend_from_slice(&header.authority_count.to_be_bytes());
+        value.extend_from_slice(&header.additional_count.to_be_bytes());
         value
     }
 }
@@ -343,7 +339,7 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use crate::dns::{encode_domain_name, DnsParser, Flags};
+    use crate::dns::{encode_domain_name, DnsParser, Flags, Header};
 
     #[test]
     fn test_response_parser_take() {
@@ -360,7 +356,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_flags() {
+    fn test_conversion_flags() {
         let raw = 0x8100_u16; // response & recursive resolution desired flags set
         let flags = Flags::from(raw);
         assert_eq!(
@@ -374,6 +370,21 @@ mod tests {
 
         let encoded: u16 = flags.into();
         assert_eq!(raw, encoded);
+    }
+
+    #[test]
+    fn test_conversion_header() {
+        let header = Header {
+            flags: Flags::from(0x8100_u16),
+            question_count: 1,
+            answer_count: 1,
+            id: 1234,
+            ..Default::default()
+        };
+        let serialized_header: Vec<u8> = header.clone().into();
+        let mut parser = DnsParser::new(serialized_header);
+        let deserialized_header = parser.parse_header();
+        assert_eq!(header, deserialized_header);
     }
 
     #[test]
