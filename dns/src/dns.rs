@@ -222,6 +222,7 @@ impl DnsParser {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[allow(clippy::upper_case_acronyms)]
 enum RecordType {
     A,     // 1 a host address
     NS,    // 2 an authoritative name server
@@ -312,6 +313,7 @@ pub struct Question {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct AnswerMeta {
     name: String,
     r#type: RecordType,
