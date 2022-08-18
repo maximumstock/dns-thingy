@@ -11,7 +11,7 @@ const DEFAULT_PORT: &str = "53000";
 fn main() {
     let dns = std::env::var("DNS").unwrap_or_else(|_| DEFAULT_DNS.into());
     let port: u16 = std::env::var("PORT")
-        .unwrap_or(DEFAULT_PORT.into())
+        .unwrap_or_else(|_| DEFAULT_PORT.into())
         .parse()
         .expect("Port must be a number");
     let socket = UdpSocket::bind(("127.0.0.1", port)).unwrap();
