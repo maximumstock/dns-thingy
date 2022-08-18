@@ -69,10 +69,6 @@ impl DnsParser {
         Self { buf, position: 0 }
     }
 
-    pub(crate) fn is_done(&self) -> bool {
-        self.buf.len() == self.position
-    }
-
     fn take_bytes(&mut self, n: usize) -> usize {
         let out = self.peek_bytes(n);
         self.position += n;
@@ -190,6 +186,7 @@ impl DnsParser {
             RecordType::NS => todo!(),
             RecordType::MD => todo!(),
             RecordType::MF => todo!(),
+            // todo
             RecordType::SOA => todo!(),
             RecordType::MB => todo!(),
             RecordType::MG => todo!(),

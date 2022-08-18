@@ -31,8 +31,6 @@ pub fn resolve(
         .map(|_| parser.parse_answer())
         .collect::<Vec<_>>();
 
-    assert!(parser.is_done());
-
     Ok((answers, parser.buf))
 }
 
