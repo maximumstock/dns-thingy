@@ -11,6 +11,7 @@ pub fn resolve(
     let request = generate_request(domain, id);
 
     let addr = (dns, 53);
+    // todo: socket pooling?
     let socket = UdpSocket::bind(("0.0.0.0", 0))?;
     socket.set_read_timeout(Some(Duration::from_secs(5)))?;
     socket.send_to(&request, &addr).unwrap();
