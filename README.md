@@ -11,3 +11,9 @@ This workspace project consists of the following subcrates:
 - `dns-client` - a minimal DNS client that wraps `dns` to test resolving `A` and `CNAME` records for a given domain name
   and optionally given upstream DNS server (default `1.1.1.1`)
 - `dns-block` - a DNS server that selectively proxies queries to `1.1.1.1` or blocks blacklisted domains based on a list
+
+## todo
+
+- [ ] parallelize dns-block
+- [ ] cache records according to answer TTL
+- [ ] implement more record types, ie. SOA
