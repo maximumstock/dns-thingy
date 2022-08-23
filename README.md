@@ -16,4 +16,4 @@ This workspace project consists of the following subcrates:
 
 - [ ] parallelize dns-block
 - [ ] cache records according to answer TTL
-- [ ] implement more record types, ie. SOA
+- [ ] implement more record types, ie. SOA
