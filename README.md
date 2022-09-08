@@ -17,3 +17,19 @@ This workspace project consists of the following subcrates:
 - [ ] parallelize dns-block
 - [ ] cache records according to answer TTL
 - [ ] implement more record types, ie. SOA
+
+## Performance Evaluation
+
+I'd like to use this opportunity to create a performance benchmark setup to get a better
+feeling for performance characteristics of different implementation strategies, such as:
+
+1. Single-threaded blocking (current implementation of `dns-block`)
+2. Multi-threaded blocking
+3. Multi-threaded async /w Tokio
+4. ...
+
+For benchmarking, I'll use [https://github.com/Tantalor93/dnspyre](https://github.com/Tantalor93/dnspyre).
+
+`dnspyre -s "127.0.0.1:53000" -n 1 -c 2 -t A --distribution --csv out.csv --codes "https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"`
+
+Need a script that runs benchmarks and records the data for the current commit hash for each implementation. 

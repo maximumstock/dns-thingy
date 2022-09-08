@@ -5,6 +5,7 @@ let
   };
 in
 pkgs.mkShell rec {
+  dnspyre = with pkgs; (import ./dnspyre.nix {});
   buildInputs = with pkgs; [
     # DNS debugging
     dig
@@ -25,6 +26,9 @@ pkgs.mkShell rec {
     cargo-feature
     cargo-udeps
     cargo-bloat
+
+    # DNS Benchmarking
+    dnspyre
   ];
 
   RUST_BACKTRACE = 1;
