@@ -1,3 +1,9 @@
 [workspace]
 
-members = ["dns", "dns-client", "dns-block"]
+members = [
+    "dns",
+    "dns-client",
+    "dns-block",
+    "dns-block-threaded",
+    "dns-block-tokio",
+]

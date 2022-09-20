@@ -34,8 +34,8 @@ pub fn resolve(
     Ok((answers, parser.buf))
 }
 
-pub fn parse_query(buf: Vec<u8>) -> Result<(u16, Question), Box<dyn std::error::Error>> {
-    let mut parser = DnsParser::new(buf);
+pub fn parse_query(buf: [u8; 512]) -> Result<(u16, Question), Box<dyn std::error::Error>> {
+    let mut parser = DnsParser::new(buf.to_vec());
     let header = parser.parse_header();
     Ok((header.id, parser.parse_question()))
 }

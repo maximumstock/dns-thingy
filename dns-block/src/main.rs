@@ -19,7 +19,7 @@ fn main() {
     println!("Started DNS blocker on 127.0.0.1::{}", port);
 
     loop {
-        let mut buf = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+        let mut buf = [0; 512];
         let (_, sender) = socket.recv_from(&mut buf).unwrap();
         let (id, question) = parse_query(buf).unwrap();
         if question.domain_name.eq("google.de") {
@@ -33,7 +33,7 @@ fn main() {
                     socket.send_to(&buf, sender).unwrap();
                 }
                 Err(e) => {
-                    dbg!(e, &question);
+                    dbg!(e);
                 }
             }
         }
