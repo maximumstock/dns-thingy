@@ -10,7 +10,9 @@ This workspace project consists of the following subcrates:
 - `dns` - a library crate implementing DNS protocol specifics and a parser to consume DNS responses
 - `dns-client` - a minimal DNS client that wraps `dns` to test resolving `A` and `CNAME` records for a given domain name
   and optionally given upstream DNS server (default `1.1.1.1`)
-- `dns-block` - a DNS server that selectively proxies queries to `1.1.1.1` or blocks blacklisted domains based on a list
+- `dns-block` - a single-threaded DNS server that selectively proxies queries to `1.1.1.1` or blocks blacklisted domains based on a list
+- `dns-block-threaded` - a multi-threaded version of `dns-block`
+- `dns-block-tokio` - an async version of `dns-block` based on Tokio (not fully async at this point, as it uses blocking parts of `dns`)
 
 ## todo
 
@@ -29,9 +31,5 @@ feeling for performance characteristics of different implementation strategies, 
 4. ...
 
 For benchmarking, I'll use [https://github.com/Tantalor93/dnspyre](https://github.com/Tantalor93/dnspyre).
+Check out [benchmarks/run.sh](benchmarks/run.sh) for details.
 
-`dnspyre -s "127.0.0.1:53000" -n 1 -c 2 -t A --distribution --csv out.csv --codes "https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"`
-
-`dnspyre -s "127.0.0.1:53000" -n 100 -t A --distribution --csv benchmarks/basic-local-release.csv --codes "https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains" > benchmarks/basic-local-release`
-
-Need a script that runs benchmarks and records the data for the current commit hash for each implementation. 
