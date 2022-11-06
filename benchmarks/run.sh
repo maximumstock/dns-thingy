@@ -2,7 +2,7 @@
 
 mkdir -p benchmarks/{basic-local,threaded-4-local,tokio-local}
 
-DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains"
+DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
 
 cargo build --release
 
