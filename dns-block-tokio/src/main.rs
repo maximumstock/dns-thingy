@@ -30,7 +30,8 @@ async fn handler(socket: &tokio::net::UdpSocket, dns: &str, buf: [u8; 512], send
     let (id, question) = parse_query(buf).unwrap();
     println!("Handling request for {:?}", question.domain_name);
     // todo implement async resolve
-    match resolve(&question.domain_name, dns, Some(id)) {
+    // todo use non-blocking resolution socket, ie. tokio::net::UdpSocket
+    match resolve(&question.domain_name, dns, Some(id), None) {
         Ok((_, reply)) => {
             socket.send_to(&reply, sender).await.unwrap();
         }

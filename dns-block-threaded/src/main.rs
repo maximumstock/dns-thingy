@@ -11,14 +11,16 @@ fn main() {
         .unwrap_or_else(|_| DEFAULT_PORT.into())
         .parse()
         .expect("Port must be a number");
-    let socket = UdpSocket::bind(("127.0.0.1", port)).unwrap();
+    let internal_socket = UdpSocket::bind(("127.0.0.1", port)).unwrap();
+    let external_socket = UdpSocket::bind(("127.0.0.1", 0)).unwrap();
 
     println!("Started DNS blocker on 127.0.0.1::{}", port);
 
     let mut handles = vec![];
 
     for thread_id in 0..4 {
-        let socket = socket.try_clone().unwrap();
+        let socket = internal_socket.try_clone().unwrap();
+        let external_socket = external_socket.try_clone().unwrap();
         let dns = Arc::clone(&dns);
         let handle = std::thread::spawn(move || loop {
             let mut buf = [0; 512];
@@ -28,7 +30,12 @@ fn main() {
                 "[Thread {}] Handling request for {:?}",
                 thread_id, question.domain_name
             );
-            match resolve(&question.domain_name, &dns, Some(id)) {
+            match resolve(
+                &question.domain_name,
+                &dns,
+                Some(id),
+                Some(external_socket.try_clone().unwrap()),
+            ) {
                 Ok((_, reply)) => {
                     socket.send_to(&reply, sender).unwrap();
                 }

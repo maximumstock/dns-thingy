@@ -7,14 +7,14 @@ pub fn resolve(
     domain: &str,
     dns: &str,
     id: Option<u16>,
+    socket: Option<UdpSocket>,
 ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error>> {
     let request = generate_request(domain, id);
 
     let addr = (dns, 53);
-    // todo: socket pooling?
-    let socket = UdpSocket::bind(("0.0.0.0", 0))?;
+    let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
     socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-    socket.send_to(&request, &addr).unwrap();
+    socket.send_to(&request, addr).unwrap();
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
     let (datagram_size, _) = socket.recv_from(&mut buffer)?;
@@ -74,12 +74,12 @@ mod tests {
     #[test]
     fn test_resolve_a_records() {
         for dns_root in DNS_SERVERS {
-            let (answers, _) = resolve("www.example.com", dns_root, None).unwrap();
+            let (answers, _) = resolve("www.example.com", dns_root, None, None).unwrap();
             if let Some(Answer::A { ipv4, .. }) = answers.last() {
                 assert_eq!(&Ipv4Addr::new(93, 184, 216, 34), ipv4);
             }
 
-            let (answers, _) = resolve("www.maximumstock.net", dns_root, None).unwrap();
+            let (answers, _) = resolve("www.maximumstock.net", dns_root, None, None).unwrap();
             let expected = vec![Ipv4Addr::new(154, 53, 57, 10)];
 
             for answer in &answers {
