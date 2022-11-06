@@ -1,0 +1,3 @@
+./basic-local
+./threaded-4-local
+./tokio-local
