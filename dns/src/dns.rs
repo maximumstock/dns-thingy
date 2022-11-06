@@ -32,10 +32,10 @@ impl From<Flags> for u16 {
         let mut value = 0u16;
         value |= (if flags.query { 0 } else { 1 }) << 15;
         value |= (flags.opcode as u16) << 11;
-        value |= (if flags.authoritative_answer { 1 } else { 0 }) << 10;
-        value |= (if flags.truncation { 1 } else { 0 }) << 9;
-        value |= (if flags.recursion_desired { 1 } else { 0 }) << 8;
-        value |= (if flags.recursion_available { 1 } else { 0 }) << 7;
+        value |= u16::from(flags.authoritative_answer) << 10;
+        value |= u16::from(flags.truncation) << 9;
+        value |= u16::from(flags.recursion_desired) << 8;
+        value |= u16::from(flags.recursion_available) << 7;
         value |= (flags.z as u16) << 3;
         value |= flags.response_code as u16;
         value
