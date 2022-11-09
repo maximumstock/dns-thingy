@@ -16,7 +16,7 @@ pkgs.mkShell rec {
     mold
     clang
     pkg-config
-    (rust-bin.stable."1.64.0".default.override {
+    (rust-bin.stable."1.65.0".default.override {
       extensions = [ "rust-src" "clippy" ];
     })
 
