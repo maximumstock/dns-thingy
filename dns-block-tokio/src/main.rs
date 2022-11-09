@@ -16,7 +16,7 @@ async fn main() {
 
     println!("Started DNS blocker on 127.0.0.1::{}", port);
 
-    let socket = UdpSocket::bind(("127.0.0.1", port)).await.unwrap();
+    let socket = UdpSocket::bind(("0.0.0.0", port)).await.unwrap();
     let dns = Arc::clone(&dns);
 
     loop {

@@ -14,8 +14,8 @@ fn main() {
         .unwrap_or_else(|_| DEFAULT_PORT.into())
         .parse()
         .expect("Port must be a number");
-    let internal_socket = UdpSocket::bind(("127.0.0.1", port)).unwrap();
-    let external_socket = UdpSocket::bind(("127.0.0.1", 0)).unwrap();
+    let internal_socket = UdpSocket::bind(("0.0.0.0", port)).unwrap();
+    let external_socket = UdpSocket::bind(("0.0.0.0", 0)).unwrap();
 
     println!("Started DNS blocker on 127.0.0.1::{}", port);
 
