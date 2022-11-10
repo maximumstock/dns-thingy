@@ -45,7 +45,9 @@ jobs:
       - name: Package Release Artifact
         run: |
           mkdir releases
-          cp target/release/dns-block* releases/
+          cp target/release/dns-block releases/dns-block
+          cp target/release/dns-block-threaded releases/dns-block-threaded
+          cp target/release/dns-block-tokio releases/dns-block-tokio
           strip releases/*
         
       - name: Upload Release Artifact
