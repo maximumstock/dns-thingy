@@ -1,7 +1,7 @@
-use std::net::UdpSocket;
+use std::{net::UdpSocket, time::Duration};
 
 use dns::{
-    dns::generate_nxdomain_response,
+    dns::generate_response,
     resolver::{parse_query, resolve},
 };
 
@@ -16,19 +16,22 @@ fn main() {
         .expect("Port must be a number");
     let internal_socket = UdpSocket::bind(("0.0.0.0", port)).unwrap();
     let external_socket = UdpSocket::bind(("0.0.0.0", 0)).unwrap();
+    external_socket
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
 
     println!("Started DNS blocker on 127.0.0.1::{}", port);
 
+    let mut buf = [0; 512];
     loop {
-        let mut buf = [0; 512];
+        buf.fill(0);
         let (_, sender) = internal_socket.recv_from(&mut buf).unwrap();
         let (id, question) = parse_query(buf).unwrap();
         if question.domain_name.eq("google.de") {
             println!("Blocking request for {:?}", question.domain_name);
-            let nx_response = generate_nxdomain_response(id).unwrap();
+            let nx_response = generate_response(id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
             internal_socket.send_to(&nx_response, sender).unwrap();
         } else {
-            println!("Allowing request for {:?}", question.domain_name);
             match resolve(
                 &question.domain_name,
                 &dns,

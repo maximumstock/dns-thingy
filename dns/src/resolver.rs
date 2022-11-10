@@ -9,15 +9,26 @@ pub fn resolve(
     id: Option<u16>,
     socket: Option<UdpSocket>,
 ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error>> {
-    let request = generate_request(domain, id);
-
-    let addr = (dns, 53);
     let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
-    // socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-    socket.send_to(&request, addr).unwrap();
+
+    let request = generate_request(domain, id);
+    let addr = (dns, 53);
+    if let Err(e) = socket.send_to(&request, addr) {
+        println!(
+            "Failed to send request for {} to {:?}: {:?}",
+            domain, addr, e
+        );
+        return Err(e.into());
+    }
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
-    let (datagram_size, _) = socket.recv_from(&mut buffer)?;
+    let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
+        println!(
+            "Failed to receive response for {} from {:?}: {:?}",
+            domain, addr, e
+        );
+        e
+    })?;
     buffer.truncate(datagram_size);
 
     let mut parser = DnsParser::new(buffer);

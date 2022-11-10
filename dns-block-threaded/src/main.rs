@@ -18,7 +18,7 @@ fn main() {
 
     let mut handles = vec![];
 
-    for thread_id in 0..4 {
+    for _ in 0..4 {
         let socket = internal_socket.try_clone().unwrap();
         let external_socket = external_socket.try_clone().unwrap();
         let dns = Arc::clone(&dns);
@@ -26,10 +26,6 @@ fn main() {
             let mut buf = [0; 512];
             let (_, sender) = socket.recv_from(&mut buf).unwrap();
             let (id, question) = parse_query(buf).unwrap();
-            println!(
-                "[Thread {}] Handling request for {:?}",
-                thread_id, question.domain_name
-            );
             match resolve(
                 &question.domain_name,
                 &dns,

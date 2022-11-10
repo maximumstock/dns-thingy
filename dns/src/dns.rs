@@ -42,9 +42,31 @@ impl From<Flags> for u16 {
     }
 }
 
-pub fn generate_nxdomain_response(id: u16) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+#[derive(Debug)]
+pub enum ResponseCode {
+    NOERROR,
+    FORMERR,
+    NXDOMAIN,
+    SERVFAIL,
+}
+
+impl From<ResponseCode> for u8 {
+    fn from(rc: ResponseCode) -> Self {
+        match rc {
+            ResponseCode::NOERROR => 0,
+            ResponseCode::FORMERR => 1,
+            ResponseCode::SERVFAIL => 2,
+            ResponseCode::NXDOMAIN => 3,
+        }
+    }
+}
+
+pub fn generate_response(
+    id: u16,
+    response_code: ResponseCode,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let flags = Flags {
-        response_code: 3,
+        response_code: response_code.into(),
         query: false,
         ..Flags::default()
     };
