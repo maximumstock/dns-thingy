@@ -44,11 +44,9 @@ jobs:
 
       - name: Package Release Artifact
         run: |
-          - mkdir releases
-          - cp target/release/dns-block releases/dns-block
-          - cp target/release/dns-block-threaded releases/dns-block-threaded
-          - cp target/release/dns-block-tokio releases/dns-block-tokio
-          - strip releases/*
+          mkdir releases
+          cp target/release/dns-block* releases/
+          strip releases/*
         
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v3
@@ -101,6 +99,7 @@ jobs:
 
       - name: Run Benchmarks
         run: |
+          chmod +x releases/dns-block*
           export PATH="$PATH:${{steps.download.outputs.download-path}}" 
           ./benchmarks/run.sh
 
