@@ -13,7 +13,7 @@ pub fn resolve(
 
     let addr = (dns, 53);
     let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
-    socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+    // socket.set_read_timeout(Some(Duration::from_secs(5)))?;
     socket.send_to(&request, addr).unwrap();
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();

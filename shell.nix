@@ -3,9 +3,9 @@ let
   pkgs = import <nixpkgs> {
     overlays = [ (import rustOverlay) ];
   };
+  dnspyre = import ./dnspyre.nix {};
 in
 pkgs.mkShell rec {
-  dnspyre = with pkgs; (import ./dnspyre.nix {});
   buildInputs = with pkgs; [
     # DNS debugging
     dig

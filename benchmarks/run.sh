@@ -1,42 +1,44 @@
 #!/usr/bin/env bash
-
-mkdir -p benchmarks/{basic-local,threaded-4-local,tokio-local}
+set -ex
+mkdir -p benchmarks/{basic,threaded-4,tokio}
 
 DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
 
+echo "Building releases"
 cargo build --release
 
+PORT=53000 cargo run --release -p dns-block &
+echo "Started dns-block"
+PORT=53001 cargo run --release -p dns-block-threaded &
+echo "Started dns-block-threaded"
+PORT=53002 cargo run --release -p dns-block-tokio &
+echo "Started dns-block-tokio"
+
 # dns-block
-cargo run --release -p dns-block &
-sleep 2
 dnspyre -s "127.0.0.1:53000" -n 1 -t A \
     --distribution \
-    --csv benchmarks/basic-local-release.csv \
-    --plot benchmarks/basic-local \
+    --csv benchmarks/basic.csv \
+    --plot benchmarks/basic \
     --codes $DOMAINS \
-    > benchmarks/basic-local/basic-local-release
-pkill dns-block
-sleep 2
+    > benchmarks/basic/stdout
 
 # dns-block-threaded
-PORT=53001 cargo run --release -p dns-block-threaded &
-sleep 2
 dnspyre -s "127.0.0.1:53001" -n 1 -t A \
     --distribution \
-    --csv benchmarks/threaded-4-local-release.csv \
-    --plot benchmarks/threaded-4-local \
+    --csv benchmarks/threaded-4.csv \
+    --plot benchmarks/threaded-4 \
     --codes $DOMAINS \
-    > benchmarks/threaded-4-local/threaded-4-local-release
-pkill dns-block-threaded
-sleep 2
+    > benchmarks/threaded-4/stdout
 
 # dns-block-tokio
-PORT=53002 cargo run --release -p dns-block-tokio &
-sleep 2
 dnspyre -s "127.0.0.1:53002" -n 1 -t A \
     --distribution \
-    --csv benchmarks/tokio-local-release.csv \
-    --plot benchmarks/tokio-local \
+    --csv benchmarks/tokio.csv \
+    --plot benchmarks/tokio \
     --codes $DOMAINS \
-    > benchmarks/tokio-local/tokio-local-release
+    > benchmarks/tokio/stdout
+
+echo "Killing servers..."
+pkill dns-block
+pkill dns-block-threaded
 pkill dns-block-tokio
