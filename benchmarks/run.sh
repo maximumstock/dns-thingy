@@ -17,7 +17,7 @@ echo "Started dns-block-tokio"
 dnspyre -s "127.0.0.1:53000" -n 1 -t A \
     --distribution \
     --csv benchmarks/basic/raw.csv \
-    --plot benchmarks/basic/plots \
+    --plot benchmarks/basic \
     --codes $DOMAINS \
     > benchmarks/basic/stdout
 
@@ -25,7 +25,7 @@ dnspyre -s "127.0.0.1:53000" -n 1 -t A \
 dnspyre -s "127.0.0.1:53001" -n 1 -t A \
     --distribution \
     --csv benchmarks/threaded-4/raw.csv \
-    --plot benchmarks/threaded-4/plots \
+    --plot benchmarks/threaded-4 \
     --codes $DOMAINS \
     > benchmarks/threaded-4/stdout
 
@@ -33,7 +33,7 @@ dnspyre -s "127.0.0.1:53001" -n 1 -t A \
 dnspyre -s "127.0.0.1:53002" -n 1 -t A \
     --distribution \
     --csv benchmarks/tokio/raw.csv \
-    --plot benchmarks/tokio/plots \
+    --plot benchmarks/tokio \
     --codes $DOMAINS \
     > benchmarks/tokio/stdout
 
