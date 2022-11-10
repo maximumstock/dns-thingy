@@ -1,6 +1,6 @@
 use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
 
-use std::{net::UdpSocket, time::Duration};
+use std::net::UdpSocket;
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
 pub fn resolve(
