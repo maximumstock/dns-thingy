@@ -99,13 +99,10 @@ jobs:
           name: releases
           path: releases
 
-      - name: Make Release Binaries Available
-        run: |
-          - export PATH="$PATH:${{steps.download.outputs.download-path}}" 
-
       - name: Run Benchmarks
         run: |
-          - "./benchmarks/run.sh"
+          export PATH="$PATH:${{steps.download.outputs.download-path}}" 
+          ./benchmarks/run.sh
 
       - name: Upload Results
         uses: actions/upload-artifact@v3
