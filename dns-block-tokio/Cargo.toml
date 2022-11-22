@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 dns = { path = "../dns" }
-tokio = { version = "1.21.1", features = ["full"] }
+tokio = { version = "1.22.0", features = ["full"] }
