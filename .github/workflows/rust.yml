@@ -124,7 +124,7 @@ jobs:
         run: nix-shell ci.nix --command "cargo test -- --nocapture --quiet"
 
       - name: Format
-        run: nix-shell ci.nix --comand "cargo fmt --all -- --check"
+        run: nix-shell ci.nix --command "cargo fmt --all -- --check"
 
       - name: Lint
         run: nix-shell ci.nix --command "cargo clippy -- -D warnings"
