@@ -2,7 +2,7 @@
 
 set -ex
 
-DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
+DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains"
 
 mkdir -p benchmarks/{basic,threaded-4,tokio}
 
