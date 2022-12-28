@@ -18,6 +18,7 @@ pub fn resolve(
             "Failed to send request for {} to {:?}: {:?}",
             domain, addr, e
         );
+        // return read timeout error
         return Err(e.into());
     }
 
