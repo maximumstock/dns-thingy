@@ -43,6 +43,6 @@ dnspyre -s "127.0.0.1:53002" -n 1 -t A \
     > benchmarks/tokio/stdout
 
 echo "Killing servers..."
-pkill dns-block
-pkill dns-block-threaded
-pkill dns-block-tokio
+pkill dns-block || true
+pkill dns-block-threaded || true
+pkill dns-block-tokio || true
