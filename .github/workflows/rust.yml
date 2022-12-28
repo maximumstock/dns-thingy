@@ -49,7 +49,7 @@ jobs:
   #         cp target/release/dns-block-threaded releases/dns-block-threaded
   #         cp target/release/dns-block-tokio releases/dns-block-tokio
   #         strip releases/*
-        
+
   #     - name: Upload Release Artifact
   #       uses: actions/upload-artifact@v3
   #       with:
@@ -79,7 +79,7 @@ jobs:
   #     - name: Run Benchmarks
   #       run: |
   #         chmod +x releases/dns-block*
-  #         export PATH="$PATH:${{steps.download.outputs.download-path}}" 
+  #         export PATH="$PATH:${{steps.download.outputs.download-path}}"
   #         ./benchmarks/run.sh
 
   #     - name: Upload Results
@@ -139,7 +139,7 @@ jobs:
           cp target/release/dns-block-threaded releases/dns-block-threaded
           cp target/release/dns-block-tokio releases/dns-block-tokio
           strip releases/*
-        
+
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -173,7 +173,6 @@ jobs:
       - name: Run Benchmarks
         run: |
           chmod +x releases/dns-block*
-          export PATH="$PATH:${{steps.download.outputs.download-path}}" 
           nix-shell ci.nix --command "./benchmarks/run.sh"
 
       - name: Upload Results

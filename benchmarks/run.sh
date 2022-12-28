@@ -4,6 +4,8 @@ set -ex
 
 DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains"
 
+export PATH="$PATH:./releases:./target/release"
+
 mkdir -p benchmarks/{basic,threaded-4,tokio}
 
 PORT=53000 dns-block &
@@ -14,6 +16,7 @@ PORT=53002 dns-block-tokio &
 echo "Started dns-block-tokio"
 
 # dns-block
+echo "Starting dns-block benchmark"
 dnspyre -s "127.0.0.1:53000" -n 1 -t A \
     --distribution \
     --csv benchmarks/basic/raw.csv \
@@ -22,6 +25,7 @@ dnspyre -s "127.0.0.1:53000" -n 1 -t A \
     > benchmarks/basic/stdout
 
 # dns-block-threaded
+echo "Starting dns-block-threaded benchmark"
 dnspyre -s "127.0.0.1:53001" -n 1 -t A \
     --distribution \
     --csv benchmarks/threaded-4/raw.csv \
@@ -30,6 +34,7 @@ dnspyre -s "127.0.0.1:53001" -n 1 -t A \
     > benchmarks/threaded-4/stdout
 
 # dns-block-tokio
+echo "Starting dns-block-tokio benchmark"
 dnspyre -s "127.0.0.1:53002" -n 1 -t A \
     --distribution \
     --csv benchmarks/tokio/raw.csv \
