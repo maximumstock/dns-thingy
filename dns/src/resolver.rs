@@ -3,6 +3,11 @@ use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
 use std::net::UdpSocket;
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
+/// todo:
+/// - error handling with own error and success types
+/// - resolve callers should not necessarily error if our dns request times out
+///   or at least send the correct dns response op code back to the requesting client
+///   -- this will still result in the same result for the request client but it will be faster
 pub fn resolve(
     domain: &str,
     dns: &str,
