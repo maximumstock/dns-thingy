@@ -27,7 +27,7 @@ fn main() {
             let (_, sender) = socket.recv_from(&mut incoming_query).unwrap();
             match resolve_pipe(
                 &incoming_query,
-                &dns,
+                (dns.as_str(), 53),
                 Some(external_socket.try_clone().unwrap()),
             ) {
                 Ok((_, reply)) => {

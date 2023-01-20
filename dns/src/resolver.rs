@@ -1,6 +1,6 @@
 use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
 
-use std::net::UdpSocket;
+use std::net::{ToSocketAddrs, UdpSocket};
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
 /// todo:
@@ -53,21 +53,21 @@ pub fn resolve(
 
 pub fn resolve_pipe(
     dns_query: &[u8],
-    dns: &str,
+    upstream_dns: impl ToSocketAddrs,
     existing_socket: Option<UdpSocket>,
 ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error>> {
     let socket = existing_socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
+    let socket_addr = upstream_dns.to_socket_addrs()?.next().unwrap();
 
-    let addr = (dns, 53000);
-    if let Err(e) = socket.send_to(dns_query, addr) {
-        println!("Failed to pipe DNS query to {:?}: {:?}", addr, e);
+    if let Err(e) = socket.send_to(dns_query, upstream_dns) {
+        println!("Failed to pipe DNS query to {:?}: {:?}", socket_addr, e);
         // return read timeout error
         return Err(e.into());
     }
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
     let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
-        println!("Failed to receive response from {:?}: {:?}", addr, e);
+        println!("Failed to receive response from {:?}: {:?}", socket_addr, e);
         e
     })?;
     buffer.truncate(datagram_size);

@@ -5,11 +5,12 @@ use dns::{
     resolver::{parse_query, resolve_pipe},
 };
 
-const DEFAULT_DNS: &str = "1.1.1.1";
+const DEFAULT_UPSTREAM_DNS: &str = "1.1.1.1:53";
 const DEFAULT_PORT: &str = "53000";
 
 fn main() {
-    let dns_host = std::env::var("DNS").unwrap_or_else(|_| DEFAULT_DNS.into());
+    let upstream_dns_host =
+        std::env::var("UPSTREAM_DNS").unwrap_or_else(|_| DEFAULT_UPSTREAM_DNS.into());
     let dns_port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| DEFAULT_PORT.into())
         .parse()
@@ -37,7 +38,7 @@ fn main() {
         } else {
             match resolve_pipe(
                 &incoming_query,
-                &dns_host,
+                &upstream_dns_host,
                 Some(outcoming_socket.try_clone().unwrap()),
             ) {
                 Ok((_, dns_response)) => {
