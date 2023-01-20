@@ -59,7 +59,7 @@ pub fn resolve_pipe(
     let socket = existing_socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
 
     let addr = (dns, 53000);
-    if let Err(e) = socket.send_to(&dns_query, addr) {
+    if let Err(e) = socket.send_to(dns_query, addr) {
         println!("Failed to pipe DNS query to {:?}: {:?}", addr, e);
         // return read timeout error
         return Err(e.into());

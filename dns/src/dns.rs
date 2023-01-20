@@ -30,7 +30,7 @@ impl From<u16> for Flags {
 impl From<Flags> for u16 {
     fn from(flags: Flags) -> Self {
         let mut value = 0u16;
-        value |= (if flags.query { 0 } else { 1 }) << 15;
+        value |= if flags.query { 0 } else { 0x8000 }; // MSB needs to be set
         value |= (flags.opcode as u16) << 11;
         value |= u16::from(flags.authoritative_answer) << 10;
         value |= u16::from(flags.truncation) << 9;
