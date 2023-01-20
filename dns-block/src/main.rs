@@ -46,7 +46,7 @@ fn main() {
                 Err(e) => {
                     eprintln!("Error from upstream DNS {:?}", e);
                     generate_response(request_id, dns::dns::ResponseCode::SERVFAIL)
-                        .and_then(|res| Ok(incoming_socket.send_to(&res, sender).unwrap()))
+                        .map(|res| incoming_socket.send_to(&res, sender).unwrap())
                         .unwrap();
                 }
             }
