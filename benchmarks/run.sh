@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-set -ex
+# set -ex
 
-DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains"
+DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
 
-export PATH="$PATH:./releases:./target/release"
+export PATH="./releases:./target/release:$PATH"
 
 mkdir -p benchmarks/{basic,threaded-4,tokio}
 
