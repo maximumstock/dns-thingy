@@ -1,6 +1,6 @@
 use std::{net::UdpSocket, sync::Arc};
 
-use dns::resolver::{parse_query, resolve};
+use dns::resolver::resolve_pipe;
 
 const DEFAULT_DNS: &str = "1.1.1.1";
 const DEFAULT_PORT: &str = "53000";
@@ -23,13 +23,11 @@ fn main() {
         let external_socket = external_socket.try_clone().unwrap();
         let dns = Arc::clone(&dns);
         let handle = std::thread::spawn(move || loop {
-            let mut buf = [0; 512];
-            let (_, sender) = socket.recv_from(&mut buf).unwrap();
-            let (id, question) = parse_query(buf).unwrap();
-            match resolve(
-                &question.domain_name,
+            let mut incoming_query = [0; 512];
+            let (_, sender) = socket.recv_from(&mut incoming_query).unwrap();
+            match resolve_pipe(
+                &incoming_query,
                 &dns,
-                Some(id),
                 Some(external_socket.try_clone().unwrap()),
             ) {
                 Ok((_, reply)) => {

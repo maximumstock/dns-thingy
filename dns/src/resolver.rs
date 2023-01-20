@@ -51,6 +51,41 @@ pub fn resolve(
     Ok((answers, parser.buf))
 }
 
+pub fn resolve_pipe(
+    dns_query: &[u8],
+    dns: &str,
+    existing_socket: Option<UdpSocket>,
+) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error>> {
+    let socket = existing_socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
+
+    let addr = (dns, 53000);
+    if let Err(e) = socket.send_to(&dns_query, addr) {
+        println!("Failed to pipe DNS query to {:?}: {:?}", addr, e);
+        // return read timeout error
+        return Err(e.into());
+    }
+
+    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+    let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
+        println!("Failed to receive response from {:?}: {:?}", addr, e);
+        e
+    })?;
+    buffer.truncate(datagram_size);
+
+    let mut parser = DnsParser::new(buffer);
+    let header = parser.parse_header();
+
+    for _ in 0..header.question_count {
+        parser.parse_question();
+    }
+
+    let answers = (0..header.answer_count)
+        .map(|_| parser.parse_answer())
+        .collect::<Vec<_>>();
+
+    Ok((answers, parser.buf))
+}
+
 pub fn parse_query(buf: [u8; 512]) -> Result<(u16, Question), Box<dyn std::error::Error>> {
     let mut parser = DnsParser::new(buf.to_vec());
     let header = parser.parse_header();
