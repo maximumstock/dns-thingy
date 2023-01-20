@@ -9,91 +9,12 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  # ci:
-  #   runs-on: ubuntu-latest
-  #   if: "!contains(github.event.head_commit.message, 'ci skip')"
-  #   steps:
-  #     - name: Checkout sources
-  #       uses: actions/checkout@v2
-
-  #     - name: Install stable toolchain
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         profile: minimal
-  #         toolchain: stable
-  #         override: true
-  #         components: rustfmt, clippy
-
-  #     - name: Cache Dependencies
-  #       uses: Swatinem/rust-cache@ce325b60658c1b38465c06cc965b79baf32c1e72
-
-  #     - name: Compile
-  #       run: cargo test --no-run --locked
-
-  #     - name: Test
-  #       run: cargo test -- --nocapture --quiet
-
-  #     - name: Format
-  #       run: cargo fmt --all -- --check
-
-  #     - name: Lint
-  #       run: cargo clippy -- -D warnings
-
-  #     - name: Build Release
-  #       run: cargo build --release
-
-  #     - name: Package Release Artifact
-  #       run: |
-  #         mkdir releases
-  #         cp target/release/dns-block releases/dns-block
-  #         cp target/release/dns-block-threaded releases/dns-block-threaded
-  #         cp target/release/dns-block-tokio releases/dns-block-tokio
-  #         strip releases/*
-
-  #     - name: Upload Release Artifact
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: releases
-  #         path: releases
-
-  # benchmark-local:
-  #   needs: ci
-  #   runs-on: ubuntu-latest
-  #   if: "!contains(github.event.head_commit.message, 'ci skip')"
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - uses: actions/setup-go@v3
-  #       with:
-  #         go-version: '^1.19.3'
-
-  #     - name: Install dnspyre
-  #       run: go install github.com/tantalor93/dnspyre/v2@latest
-
-  #     - uses: actions/download-artifact@v3
-  #       id: download
-  #       with:
-  #         name: releases
-  #         path: releases
-
-  #     - name: Run Benchmarks
-  #       run: |
-  #         chmod +x releases/dns-block*
-  #         export PATH="$PATH:${{steps.download.outputs.download-path}}"
-  #         ./benchmarks/run.sh
-
-  #     - name: Upload Results
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: benchmark-results
-  #         path: benchmarks
-
-  ci2:
+  ci:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Rust cache
         uses: actions/cache@v3
@@ -112,7 +33,7 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - uses: cachix/cachix-action@v11
+      - uses: cachix/cachix-action@v12
         with:
           name: maximumstock
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -147,7 +68,7 @@ jobs:
           path: releases
 
   benchmark:
-    needs: ci2
+    needs: ci
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
@@ -159,7 +80,7 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - uses: cachix/cachix-action@v11
+      - uses: cachix/cachix-action@v12
         with:
           name: maximumstock
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
