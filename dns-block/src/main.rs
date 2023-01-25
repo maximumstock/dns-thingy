@@ -27,28 +27,29 @@ fn main() {
     let mut incoming_query = [0; 512];
     loop {
         incoming_query.fill(0);
-        let (_, sender) = incoming_socket.recv_from(&mut incoming_query).unwrap();
-        let (request_id, question) = parse_query(incoming_query).unwrap();
+        if let Ok((_, sender)) = incoming_socket.recv_from(&mut incoming_query) {
+            let (request_id, question) = parse_query(incoming_query).unwrap();
 
-        if apply_filter(&question) {
-            println!("Blocking request for {:?}", question.domain_name);
-            let nx_response =
-                generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
-            incoming_socket.send_to(&nx_response, sender).unwrap();
-        } else {
-            match resolve_pipe(
-                &incoming_query,
-                &upstream_dns_host,
-                Some(outcoming_socket.try_clone().unwrap()),
-            ) {
-                Ok((_, dns_response)) => {
-                    incoming_socket.send_to(&dns_response, sender).unwrap();
-                }
-                Err(e) => {
-                    eprintln!("Error from upstream DNS {:?}", e);
-                    generate_response(request_id, dns::dns::ResponseCode::SERVFAIL)
-                        .map(|res| incoming_socket.send_to(&res, sender).unwrap())
-                        .unwrap();
+            if apply_filter(&question) {
+                println!("Blocking request for {:?}", question.domain_name);
+                let nx_response =
+                    generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
+                incoming_socket.send_to(&nx_response, sender).unwrap();
+            } else {
+                match resolve_pipe(
+                    &incoming_query,
+                    &upstream_dns_host,
+                    Some(outcoming_socket.try_clone().unwrap()),
+                ) {
+                    Ok((_, dns_response)) => {
+                        incoming_socket.send_to(&dns_response, sender).unwrap();
+                    }
+                    Err(e) => {
+                        eprintln!("Error from upstream DNS {:?}", e);
+                        generate_response(request_id, dns::dns::ResponseCode::SERVFAIL)
+                            .map(|res| incoming_socket.send_to(&res, sender).unwrap())
+                            .unwrap();
+                    }
                 }
             }
         }
