@@ -14,7 +14,7 @@ This workspace project consists of the following subcrates:
 - `dns-block-threaded` - a multi-threaded version of `dns-block`
 - `dns-block-tokio` - an async version of `dns-block` based on Tokio (not fully async at this point, as it uses blocking parts of `dns`)
 
-## todo
+## TODO
 
 - [ ] add custom blocking rules
 - [ ] parallelize dns-block
@@ -30,5 +30,4 @@ feeling for performance characteristics of different implementation strategies, 
 2. Multi-threaded blocking
 3. Asynchronous based on Tokio
 
-For benchmarking, I'll use [https://github.com/Tantalor93/dnspyre](https://github.com/Tantalor93/dnspyre).
-Check out [benchmarks/run.sh](benchmarks/run.sh) for details.
+See [Benchmarks](benchmarks/README.md) for further information.
