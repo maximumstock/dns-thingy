@@ -2,8 +2,8 @@
 
 [![Continuous Integration](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml)
 
-An educational project to learn more about the Domain Name System.
-The goal is to build a minimal content filter system based on DNS similar to Adguard.
+A minimal work-in-progress content filter system based on DNS similar to Adguard.
+This project serves an purpose to learn more about the [Domain Name System](https://en.wikipedia.org/wiki/Domain_Name_System).
 
 This workspace project consists of the following subcrates:
 
@@ -16,9 +16,10 @@ This workspace project consists of the following subcrates:
 
 ## todo
 
+- [ ] add custom blocking rules
 - [ ] parallelize dns-block
 - [ ] cache records according to answer TTL
-- [ ] implement more record types, ie. SOA
+- [ ] implement more record types
 
 ## Performance Evaluation
 
@@ -27,9 +28,7 @@ feeling for performance characteristics of different implementation strategies, 
 
 1. Single-threaded blocking (current implementation of `dns-block`)
 2. Multi-threaded blocking
-3. Multi-threaded async /w Tokio
-4. ...
+3. Asynchronous based on Tokio
 
 For benchmarking, I'll use [https://github.com/Tantalor93/dnspyre](https://github.com/Tantalor93/dnspyre).
 Check out [benchmarks/run.sh](benchmarks/run.sh) for details.
-
