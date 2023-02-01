@@ -1,6 +1,10 @@
 use std::{net::UdpSocket, sync::Arc};
 
-use dns::resolver::resolve_pipe;
+use dns::{
+    dns::generate_response,
+    filter::apply_domain_filter,
+    resolver::{parse_query, resolve_pipe},
+};
 
 const DEFAULT_DNS: &str = "1.1.1.1";
 const DEFAULT_PORT: &str = "53000";

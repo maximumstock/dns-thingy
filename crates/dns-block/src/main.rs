@@ -1,7 +1,8 @@
 use std::{net::UdpSocket, time::Duration};
 
 use dns::{
-    dns::{generate_response, Question},
+    dns::generate_response,
+    filter::apply_domain_filter,
     resolver::{parse_query, resolve_pipe},
 };
 
@@ -22,7 +23,7 @@ fn main() {
         .set_read_timeout(Some(Duration::from_secs(5)))
         .unwrap();
 
-    println!("Started DNS blocker on 127.0.0.1::{}", dns_port);
+    println!("Started DNS blocker on 127.0.0.1::{dns_port}");
 
     let mut incoming_query = [0; 512];
     loop {
@@ -30,7 +31,7 @@ fn main() {
         if let Ok((_, sender)) = incoming_socket.recv_from(&mut incoming_query) {
             let (request_id, question) = parse_query(incoming_query).unwrap();
 
-            if apply_filter(&question) {
+            if apply_domain_filter(&question.domain_name) {
                 println!("Blocking request for {:?}", question.domain_name);
                 let nx_response =
                     generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
@@ -45,7 +46,7 @@ fn main() {
                         incoming_socket.send_to(&dns_response, sender).unwrap();
                     }
                     Err(e) => {
-                        eprintln!("Error from upstream DNS {:?}", e);
+                        eprintln!("Error from upstream DNS {e:?}");
                         generate_response(request_id, dns::dns::ResponseCode::SERVFAIL)
                             .map(|res| incoming_socket.send_to(&res, sender).unwrap())
                             .unwrap();
@@ -54,8 +55,4 @@ fn main() {
             }
         }
     }
-}
-
-fn apply_filter(question: &Question) -> bool {
-    question.domain_name.eq("google.de")
 }

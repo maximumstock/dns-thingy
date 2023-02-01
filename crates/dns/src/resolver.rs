@@ -19,20 +19,14 @@ pub fn resolve(
     let request = generate_request(domain, id);
     let addr = (dns, 53);
     if let Err(e) = socket.send_to(&request, addr) {
-        println!(
-            "Failed to send request for {} to {:?}: {:?}",
-            domain, addr, e
-        );
+        println!("Failed to send request for {domain} to {addr:?}: {e:?}");
         // return read timeout error
         return Err(e.into());
     }
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
     let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
-        println!(
-            "Failed to receive response for {} from {:?}: {:?}",
-            domain, addr, e
-        );
+        println!("Failed to receive response for {domain} from {addr:?}: {e:?}");
         e
     })?;
     buffer.truncate(datagram_size);
@@ -60,14 +54,14 @@ pub fn resolve_pipe(
     let socket_addr = upstream_dns.to_socket_addrs()?.next().unwrap();
 
     if let Err(e) = socket.send_to(dns_query, upstream_dns) {
-        println!("Failed to pipe DNS query to {:?}: {:?}", socket_addr, e);
+        println!("Failed to pipe DNS query to {socket_addr:?}: {e:?}");
         // return read timeout error
         return Err(e.into());
     }
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
     let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
-        println!("Failed to receive response from {:?}: {:?}", socket_addr, e);
+        println!("Failed to receive response from {socket_addr:?}: {e:?}");
         e
     })?;
     buffer.truncate(datagram_size);
