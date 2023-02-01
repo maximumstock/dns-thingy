@@ -3,9 +3,9 @@
 [![Continuous Integration](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml)
 
 A minimal work-in-progress content filter system based on DNS similar to Adguard.
-This project serves an purpose to learn more about the [Domain Name System](https://en.wikipedia.org/wiki/Domain_Name_System).
+This project serves the purpose to learn more about the [Domain Name System](https://en.wikipedia.org/wiki/Domain_Name_System).
 
-This workspace project consists of the following subcrates:
+This workspace project consists of the following subcrates in `crates`:
 
 - `dns` - a library crate implementing DNS protocol specifics and a parser to consume DNS responses
 - `dns-client` - a minimal DNS client that wraps `dns` to test resolving `A` and `CNAME` records for a given domain name
