@@ -3,7 +3,7 @@ use std::{net::UdpSocket, time::Duration};
 use dns::{
     dns::generate_response,
     filter::apply_domain_filter,
-    resolver::{parse_query, resolve_pipe},
+    resolver::{extract_query_id_and_domain, resolve_query},
 };
 
 const DEFAULT_UPSTREAM_DNS: &str = "1.1.1.1:53";
@@ -29,7 +29,7 @@ fn main() {
     loop {
         incoming_query.fill(0);
         if let Ok((_, sender)) = incoming_socket.recv_from(&mut incoming_query) {
-            let (request_id, question) = parse_query(incoming_query).unwrap();
+            let (request_id, question) = extract_query_id_and_domain(incoming_query).unwrap();
 
             if apply_domain_filter(&question.domain_name) {
                 println!("Blocking request for {:?}", question.domain_name);
@@ -37,13 +37,13 @@ fn main() {
                     generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
                 incoming_socket.send_to(&nx_response, sender).unwrap();
             } else {
-                match resolve_pipe(
+                match resolve_query(
                     &incoming_query,
                     &upstream_dns_host,
                     Some(outcoming_socket.try_clone().unwrap()),
                 ) {
-                    Ok((_, dns_response)) => {
-                        incoming_socket.send_to(&dns_response, sender).unwrap();
+                    Ok((_, reply)) => {
+                        incoming_socket.send_to(&reply, sender).unwrap();
                     }
                     Err(e) => {
                         eprintln!("Error from upstream DNS {e:?}");

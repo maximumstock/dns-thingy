@@ -81,7 +81,7 @@ pub fn generate_response(
 }
 
 #[derive(Debug)]
-pub(crate) struct DnsParser {
+pub struct DnsParser {
     pub buf: Vec<u8>,
     position: usize,
 }

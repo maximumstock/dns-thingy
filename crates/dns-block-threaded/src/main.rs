@@ -3,10 +3,10 @@ use std::{net::UdpSocket, sync::Arc};
 use dns::{
     dns::generate_response,
     filter::apply_domain_filter,
-    resolver::{parse_query, resolve_pipe},
+    resolver::{extract_query_id_and_domain, resolve_query},
 };
 
-const DEFAULT_DNS: &str = "1.1.1.1";
+const DEFAULT_DNS: &str = "1.1.1.1:53";
 const DEFAULT_PORT: &str = "53000";
 
 fn main() {
@@ -53,16 +53,16 @@ fn process(
     external_socket: &UdpSocket,
 ) {
     let (_, sender) = internal_socket.recv_from(incoming_query).unwrap();
-    let (request_id, question) = parse_query(*incoming_query).unwrap();
+    let (request_id, question) = extract_query_id_and_domain(*incoming_query).unwrap();
 
     if apply_domain_filter(&question.domain_name) {
         println!("Blocking request for {:?}", question.domain_name);
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
         internal_socket.send_to(&nx_response, sender).unwrap();
     } else {
-        match resolve_pipe(
+        match resolve_query(
             &*incoming_query,
-            (dns.as_str(), 53),
+            dns.as_str(),
             Some(external_socket.try_clone().unwrap()),
         ) {
             Ok((_, reply)) => {
