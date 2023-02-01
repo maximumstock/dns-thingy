@@ -7,7 +7,7 @@ let
 in
 pkgs.mkShell rec {
   buildInputs = with pkgs; [
-    (rust-bin.stable."1.65.0".default.override {
+    (rust-bin.stable."1.67.0".default.override {
       extensions = [ "rust-src" "clippy" ];
     })
     dnspyre
