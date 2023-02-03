@@ -16,6 +16,25 @@ This workspace project consists of the following subcrates in `crates`:
 
 ## TODO
 
+- [ ] fix: find query that results in. looks like it happens consistently across server implementations for a specific query.
+
+```
+thread '<unnamed>' panicked at 'range start index 506 out of range for slice of length 358', dns/src/dns.rs:101:9
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/std/src/panicking.rs:584:5
+   1: core::panicking::panic_fmt
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/panicking.rs:142:14
+   2: core::slice::index::slice_start_index_len_fail_rt
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/slice/index.rs:53:5
+   3: core::slice::index::slice_start_index_len_fail
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/slice/index.rs:42:9
+   4: dns::dns::DnsParser::parse_domain_name_rec
+   5: dns::dns::DnsParser::parse_answer
+   6: <alloc::vec::Vec<T> as alloc::vec::spec_from_iter::SpecFromIter<T,I>>::from_iter
+   7: dns::resolver::resolve
+```
+
 - [ ] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
 - [ ] add custom blocking rules
 - [ ] parallelize dns-block
