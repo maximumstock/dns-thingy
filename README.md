@@ -16,6 +16,7 @@ This workspace project consists of the following subcrates in `crates`:
 
 ## TODO
 
+- [ ] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
 - [ ] add custom blocking rules
 - [ ] parallelize dns-block
 - [ ] cache records according to answer TTL

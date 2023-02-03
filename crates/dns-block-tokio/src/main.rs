@@ -2,7 +2,7 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::net::UdpSocket;
 
 use dns::{
-    dns::generate_response,
+    dns::{generate_response, DnsParser},
     filter::apply_domain_filter,
     resolver::{extract_query_id_and_domain, resolve_query_async},
 };
@@ -47,7 +47,7 @@ async fn process(
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
         socket.send_to(&nx_response, sender).await.unwrap();
     } else {
-        match resolve_query(&buf, dns, None) {
+        match resolve_query_async(&buf, dns, None).await {
             Ok((_, reply)) => {
                 socket.send_to(&reply, sender).await.unwrap();
             }

@@ -87,7 +87,7 @@ pub struct DnsParser {
 }
 
 impl DnsParser {
-    pub(crate) fn new(buf: Vec<u8>) -> Self {
+    pub fn new(buf: Vec<u8>) -> Self {
         Self { buf, position: 0 }
     }
 
