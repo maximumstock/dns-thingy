@@ -1,15 +1,15 @@
 use std::net::Ipv4Addr;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-pub(crate) struct Flags {
-    query: bool,
-    opcode: u8,
-    authoritative_answer: bool,
-    truncation: bool,
-    recursion_desired: bool,
-    recursion_available: bool,
-    z: u8,
-    response_code: u8,
+pub struct Flags {
+    pub query: bool,
+    pub opcode: u8,
+    pub authoritative_answer: bool,
+    pub truncation: bool,
+    pub recursion_desired: bool,
+    pub recursion_available: bool,
+    pub z: u8,
+    pub response_code: u8,
 }
 
 impl From<u16> for Flags {
@@ -167,7 +167,7 @@ impl DnsParser {
         self.take_bytes(1);
     }
 
-    pub(crate) fn parse_question(self: &mut DnsParser) -> Question {
+    pub fn parse_question(self: &mut DnsParser) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
             r#type: self.take_bytes(2),
@@ -175,7 +175,7 @@ impl DnsParser {
         }
     }
 
-    pub(crate) fn parse_answer(&mut self) -> Answer {
+    pub fn parse_answer(&mut self) -> Answer {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
         let name = self.parse_domain_name();
@@ -225,10 +225,11 @@ impl DnsParser {
             RecordType::MAILA => todo!(),
             RecordType::ANY => todo!(),
             RecordType::URI => todo!(),
+            RecordType::OTHER => todo!(),
         }
     }
 
-    pub(crate) fn parse_header(&mut self) -> Header {
+    pub fn parse_header(&mut self) -> Header {
         Header {
             id: self.take_bytes(2) as u16,
             flags: Flags::from(self.take_bytes(2) as u16),
@@ -265,6 +266,7 @@ enum RecordType {
     MAILA, // 254 A request for mail agent RRs (Obsolete - see MX)
     ANY,   // 255 A request for all records
     URI,   // 256
+    OTHER,
 }
 
 impl From<usize> for RecordType {
@@ -291,21 +293,19 @@ impl From<usize> for RecordType {
             254 => Self::MAILA,
             255 => Self::ANY,
             256 => Self::URI,
-            _ => {
-                unreachable!();
-            }
+            _ => Self::OTHER,
         }
     }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-pub(crate) struct Header {
-    pub(crate) id: u16,
-    pub(crate) flags: Flags,
-    pub(crate) question_count: u16,
-    pub(crate) answer_count: u16,
-    pub(crate) authority_count: u16,
-    pub(crate) additional_count: u16,
+pub struct Header {
+    pub id: u16,
+    pub flags: Flags,
+    pub question_count: u16,
+    pub answer_count: u16,
+    pub authority_count: u16,
+    pub additional_count: u16,
 }
 
 impl From<Header> for Vec<u8> {

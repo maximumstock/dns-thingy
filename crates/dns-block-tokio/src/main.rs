@@ -4,7 +4,7 @@ use tokio::net::UdpSocket;
 use dns::{
     dns::generate_response,
     filter::apply_domain_filter,
-    resolver::{extract_query_id_and_domain, resolve_query},
+    resolver::{extract_query_id_and_domain, resolve_query_async},
 };
 
 const DEFAULT_DNS: &str = "1.1.1.1:53";

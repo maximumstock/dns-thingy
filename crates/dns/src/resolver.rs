@@ -77,7 +77,7 @@ pub async fn resolve_query_async(
         return Err(e.into());
     }
 
-    let mut buffer = Vec::with_capacity(512);
+    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
     let (datagram_size, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
         println!("Failed to receive response from {upstream_dns:?}: {e:?}");
         e
