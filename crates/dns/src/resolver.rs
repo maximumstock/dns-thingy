@@ -17,16 +17,15 @@ pub fn resolve_domain(
     let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
 
     let request = generate_request(domain, id);
-    let addr = (dns, 53);
-    if let Err(e) = socket.send_to(&request, addr) {
-        println!("Failed to send request for {domain} to {addr:?}: {e:?}");
+    if let Err(e) = socket.send_to(&request, dns) {
+        println!("Failed to send request for {domain} to {dns:?}: {e:?}");
         // return read timeout error
         return Err(e.into());
     }
 
     let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
     let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
-        println!("Failed to receive response for {domain} from {addr:?}: {e:?}");
+        println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
     buffer.truncate(datagram_size);
@@ -87,6 +86,35 @@ pub async fn resolve_query_async(
     parse_answers(buffer)
 }
 
+pub async fn resolve_domain_async(
+    domain: &str,
+    dns: &str,
+    id: Option<u16>,
+    existing_socket: Option<tokio::net::UdpSocket>,
+) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+    let socket = if let Some(x) = existing_socket {
+        x
+    } else {
+        tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap()
+    };
+
+    let request = generate_request(domain, id);
+    if let Err(e) = socket.send_to(&request, dns).await {
+        println!("Failed to send request for {domain} to {dns:?}: {e:?}");
+        // return read timeout error
+        return Err(e.into());
+    }
+
+    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+    let (datagram_size, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
+        println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
+        e
+    })?;
+    buffer.truncate(datagram_size);
+
+    parse_answers(buffer)
+}
+
 fn parse_answers(
     buffer: Vec<u8>,
 ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
@@ -112,11 +140,13 @@ pub fn extract_query_id_and_domain(
     Ok((header.id, parser.parse_question()))
 }
 
-/// Generates a DNS query for INternet A records
+const DEFAULT_ID: (u8, u8) = ((1337u16 >> 4) as u8, (1337 & 0xFF) as u8);
+
+/// Generates a recursive DNS query for INternet A records
 pub(crate) fn generate_request(domain: &str, id: Option<u16>) -> Vec<u8> {
     let id = id
         .map(|n| ((n >> 8) as u8, (n & 0xFF) as u8))
-        .unwrap_or((0x10, 0x01));
+        .unwrap_or(DEFAULT_ID);
     const QTYPE: [u8; 2] = [0x00, 0x01];
     const QCLASS: [u8; 2] = [0x00, 0x01];
     let request_header: [u8; 12] = [

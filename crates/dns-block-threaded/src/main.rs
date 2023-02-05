@@ -3,7 +3,7 @@ use std::{net::UdpSocket, sync::Arc};
 use dns::{
     dns::generate_response,
     filter::apply_domain_filter,
-    resolver::{extract_query_id_and_domain, resolve_query},
+    resolver::{extract_query_id_and_domain, resolve_domain, resolve_query},
 };
 
 const DEFAULT_DNS: &str = "1.1.1.1:53";
@@ -60,9 +60,10 @@ fn process(
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
         internal_socket.send_to(&nx_response, sender).unwrap();
     } else {
-        match resolve_query(
-            &*incoming_query,
+        match resolve_domain(
+            &question.domain_name,
             dns.as_str(),
+            Some(request_id),
             Some(external_socket.try_clone().unwrap()),
         ) {
             Ok((_, reply)) => {

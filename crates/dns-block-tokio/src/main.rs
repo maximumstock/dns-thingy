@@ -4,7 +4,7 @@ use tokio::net::UdpSocket;
 use dns::{
     dns::generate_response,
     filter::apply_domain_filter,
-    resolver::{extract_query_id_and_domain, resolve_query_async},
+    resolver::{extract_query_id_and_domain, resolve_domain_async, resolve_query_async},
 };
 
 const DEFAULT_DNS: &str = "1.1.1.1:53";
@@ -47,7 +47,7 @@ async fn process(
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
         socket.send_to(&nx_response, sender).await.unwrap();
     } else {
-        match resolve_query_async(&buf, dns, None).await {
+        match resolve_domain_async(&question.domain_name, dns, Some(request_id), None).await {
             Ok((_, reply)) => {
                 socket.send_to(&reply, sender).await.unwrap();
             }
