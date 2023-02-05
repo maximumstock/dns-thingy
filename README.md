@@ -36,10 +36,13 @@ stack backtrace:
 ```
 
 - [ ] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
+- [ ] perf: optimise buffer allocation
+- [ ] bench: don't actually send out queries during benchmarks to eliminate network & upstream performance from the benchmark
 - [ ] add custom blocking rules
 - [ ] parallelize dns-block
 - [ ] cache records according to answer TTL
 - [ ] implement more record types
+- [ ] request builder
 
 ## Performance Evaluation
 
