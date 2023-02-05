@@ -3,11 +3,6 @@ use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
 use std::net::{ToSocketAddrs, UdpSocket};
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
-/// todo:
-/// - error handling with own error and success types
-/// - resolve callers should not necessarily error if our dns request times out
-///   or at least send the correct dns response op code back to the requesting client
-///   -- this will still result in the same result for the request client but it will be faster
 pub fn resolve_domain(
     domain: &str,
     dns: &str,
@@ -23,7 +18,7 @@ pub fn resolve_domain(
         return Err(e.into());
     }
 
-    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+    let mut buffer = [0; 512].to_vec();
     let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
@@ -48,7 +43,7 @@ pub fn resolve_query(
         return Err(e.into());
     }
 
-    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+    let mut buffer = [0; 512].to_vec();
     let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
         println!("Failed to receive response from {socket_addr:?}: {e:?}");
         e
@@ -76,7 +71,7 @@ pub async fn resolve_query_async(
         return Err(e.into());
     }
 
-    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+    let mut buffer = [0; 512].to_vec();
     let (datagram_size, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
         println!("Failed to receive response from {upstream_dns:?}: {e:?}");
         e
@@ -105,7 +100,7 @@ pub async fn resolve_domain_async(
         return Err(e.into());
     }
 
-    let mut buffer = (0..512).into_iter().map(|_| 0).collect::<Vec<_>>();
+    let mut buffer = [0; 512].to_vec();
     let (datagram_size, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
@@ -171,7 +166,7 @@ mod tests {
 
     use super::{resolve_domain, Answer};
 
-    const DNS_SERVERS: [&str; 1] = ["1.1.1.1"];
+    const DNS_SERVERS: [&str; 1] = ["1.1.1.1:53"];
 
     #[test]
     fn test_resolve_a_records() {
