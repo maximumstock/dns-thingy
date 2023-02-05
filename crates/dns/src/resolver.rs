@@ -1,6 +1,6 @@
 use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
 
-use std::net::{ToSocketAddrs, UdpSocket};
+use std::net::UdpSocket;
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
 pub fn resolve_domain(
@@ -14,7 +14,6 @@ pub fn resolve_domain(
     let request = generate_request(domain, id);
     if let Err(e) = socket.send_to(&request, dns) {
         println!("Failed to send request for {domain} to {dns:?}: {e:?}");
-        // return read timeout error
         return Err(e.into());
     }
 
@@ -23,60 +22,7 @@ pub fn resolve_domain(
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
-    buffer.truncate(datagram_size);
-
-    parse_answers(buffer)
-}
-
-/// Resolves DNS queries by forwarding the raw query to an upstream DNS server
-pub fn resolve_query(
-    dns_query: &[u8],
-    upstream_dns: impl ToSocketAddrs,
-    existing_socket: Option<UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
-    let socket = existing_socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
-    let socket_addr = upstream_dns.to_socket_addrs()?.next().unwrap();
-
-    if let Err(e) = socket.send_to(dns_query, upstream_dns) {
-        println!("Failed to pipe DNS query to {socket_addr:?}: {e:?}");
-        // return read timeout error
-        return Err(e.into());
-    }
-
-    let mut buffer = [0; 512].to_vec();
-    let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
-        println!("Failed to receive response from {socket_addr:?}: {e:?}");
-        e
-    })?;
-    buffer.truncate(datagram_size);
-
-    parse_answers(buffer)
-}
-
-/// Resolves DNS queries by forwarding the raw query to an upstream DNS server
-pub async fn resolve_query_async(
-    dns_query: &[u8],
-    upstream_dns: &str,
-    existing_socket: Option<tokio::net::UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
-    let socket = if let Some(x) = existing_socket {
-        x
-    } else {
-        tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap()
-    };
-
-    if let Err(e) = socket.send_to(dns_query, upstream_dns).await {
-        println!("Failed to pipe DNS query to {upstream_dns:?}: {e:?}");
-        // return read timeout error
-        return Err(e.into());
-    }
-
-    let mut buffer = [0; 512].to_vec();
-    let (datagram_size, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
-        println!("Failed to receive response from {upstream_dns:?}: {e:?}");
-        e
-    })?;
-    buffer.truncate(datagram_size);
+    // buffer.truncate(datagram_size);
 
     parse_answers(buffer)
 }
@@ -96,7 +42,6 @@ pub async fn resolve_domain_async(
     let request = generate_request(domain, id);
     if let Err(e) = socket.send_to(&request, dns).await {
         println!("Failed to send request for {domain} to {dns:?}: {e:?}");
-        // return read timeout error
         return Err(e.into());
     }
 
@@ -105,7 +50,7 @@ pub async fn resolve_domain_async(
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
-    buffer.truncate(datagram_size);
+    // buffer.truncate(datagram_size);
 
     parse_answers(buffer)
 }
