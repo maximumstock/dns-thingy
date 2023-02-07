@@ -8,7 +8,7 @@ This project serves the purpose to learn more about the [Domain Name System](htt
 
 This workspace project consists of the following subcrates in `crates`:
 
-- `dns` - a library crate implementing DNS protocol specifics and a parser to consume DNS responses
+- `dns` - a library crate for constructing and consuming DNS packets (currently only supports DNS over UDP)
 - `dns-client` - a minimal DNS client that wraps `dns` to test resolving `A` and `CNAME` records for a given domain name
   and optionally given upstream DNS server (default `1.1.1.1`)
 - `dns-block` - a single-threaded DNS server that selectively proxies queries to `1.1.1.1` or blocks blacklisted domains based on a list
@@ -20,7 +20,6 @@ This workspace project consists of the following subcrates in `crates`:
 - [ ] perf: optimise buffer allocation
 - [ ] bench: don't actually send out queries during benchmarks to eliminate network & upstream performance from the benchmark
 - [ ] add custom blocking rules
-- [ ] parallelize dns-block
 - [ ] cache records according to answer TTL
 - [ ] implement more record types
 - [ ] request builder
