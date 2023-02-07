@@ -2,7 +2,8 @@
 
 [![Continuous Integration](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/maximumstock/dns-thingy/actions/workflows/rust.yml)
 
-A minimal work-in-progress content filter system based on DNS similar to Adguard.
+A minimal work-in-progress content filter system based on DNS similar to [AdguardHome](https://github.com/AdguardTeam/AdGuardHome).
+
 This project serves the purpose to learn more about the [Domain Name System](https://en.wikipedia.org/wiki/Domain_Name_System).
 
 This workspace project consists of the following subcrates in `crates`:
