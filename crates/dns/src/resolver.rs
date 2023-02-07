@@ -18,11 +18,10 @@ pub fn resolve_domain(
     }
 
     let mut buffer = [0; 512].to_vec();
-    let (datagram_size, _) = socket.recv_from(&mut buffer).map_err(|e| {
+    let (_, _) = socket.recv_from(&mut buffer).map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
-    // buffer.truncate(datagram_size);
 
     parse_answers(buffer)
 }
@@ -46,11 +45,10 @@ pub async fn resolve_domain_async(
     }
 
     let mut buffer = [0; 512].to_vec();
-    let (datagram_size, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
+    let (_, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
-    // buffer.truncate(datagram_size);
 
     parse_answers(buffer)
 }

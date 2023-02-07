@@ -16,7 +16,6 @@ This workspace project consists of the following subcrates in `crates`:
 
 ## TODO
 
-- [x] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
 - [ ] perf: optimise buffer allocation
 - [ ] bench: don't actually send out queries during benchmarks to eliminate network & upstream performance from the benchmark
 - [ ] add custom blocking rules
@@ -24,6 +23,7 @@ This workspace project consists of the following subcrates in `crates`:
 - [ ] cache records according to answer TTL
 - [ ] implement more record types
 - [ ] request builder
+- [x] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
 
 ## Performance Evaluation
 
