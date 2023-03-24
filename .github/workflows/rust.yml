@@ -2,7 +2,7 @@ name: Continuous Integration
 on:
   pull_request:
   push:
-    branches: [ master ]
+    branches: [master]
 
 env:
   # Because matklad said so https://matklad.github.io/2021/09/04/fast-rust-builds.html
@@ -36,7 +36,7 @@ jobs:
       - uses: cachix/cachix-action@v12
         with:
           name: maximumstock
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Compile
         run: nix-shell ci.nix --command "cargo test --no-run --locked"
@@ -70,7 +70,7 @@ jobs:
   docker-build:
     needs: ci
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'ci skip')"
+    if: "!contains(github.event.head_commit.message, 'docker skip')"
     steps:
       - uses: actions/checkout@v3
 
@@ -97,7 +97,7 @@ jobs:
   benchmark:
     needs: ci
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'ci skip')"
+    if: "!contains(github.event.head_commit.message, 'bench skip')"
     steps:
       - uses: actions/checkout@v3
 
@@ -110,7 +110,7 @@ jobs:
       - uses: cachix/cachix-action@v12
         with:
           name: maximumstock
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - uses: actions/download-artifact@v3
         id: download
