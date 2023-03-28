@@ -70,7 +70,7 @@ jobs:
   docker-build:
     needs: ci
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'docker skip')"
+    if: "!contains(github.event.head_commit.message, 'docker skip') && github.ref_name == 'main'"
     steps:
       - uses: actions/checkout@v3
 
