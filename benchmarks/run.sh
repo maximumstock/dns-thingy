@@ -2,7 +2,7 @@
 
 # set -ex
 
-DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
+DOMAINS="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains"
 
 export PATH="./releases:./target/release:$PATH"
 
