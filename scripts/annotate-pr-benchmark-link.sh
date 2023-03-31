@@ -4,14 +4,15 @@
 
 BRANCH=$1
 
-MASTER_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=master&status=completed")
-BRANCH_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=$BRANCH&status=completed")
+# Get latest, successful runs for master and $BRANCH
+MASTER_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=master&status=completed" | jq '[.workflow_runs[]|select(.conclusion=="success")][0]')
+BRANCH_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=$BRANCH&status=completed" | jq '[.workflow_runs[]|select(.conclusion=="success")][0]')
 
-MASTER_SUITE_ID=$(echo "$MASTER_RUN" | jq ".workflow_runs[0].check_suite_id")
-BRANCH_SUITE_ID=$(echo "$BRANCH_RUN" | jq ".workflow_runs[0].check_suite_id")
+MASTER_SUITE_ID=$(echo "$MASTER_RUN" | jq ".check_suite_id")
+BRANCH_SUITE_ID=$(echo "$BRANCH_RUN" | jq ".check_suite_id")
 
-MASTER_RUN_ID=$(echo "$MASTER_RUN" | jq ".workflow_runs[0].id")
-BRANCH_RUN_ID=$(echo "$BRANCH_RUN" | jq ".workflow_runs[0].id")
+MASTER_RUN_ID=$(echo "$MASTER_RUN" | jq ".id")
+BRANCH_RUN_ID=$(echo "$BRANCH_RUN" | jq ".id")
 
 MASTER_ARTIFACT_ID=$(gh api "/repos/maximumstock/dns-thingy/actions/runs/$MASTER_RUN_ID/artifacts" | jq ".artifacts[0].id")
 BRANCH_ARTIFACT_ID=$(gh api "/repos/maximumstock/dns-thingy/actions/runs/$BRANCH_RUN_ID/artifacts" | jq ".artifacts[0].id")
