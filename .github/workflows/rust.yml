@@ -128,3 +128,18 @@ jobs:
         with:
           name: benchmark-results
           path: benchmarks
+
+  benchmark-annotate-pr:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    if: "github.ref != 'master'"
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Annotate PR with benchmark artifact links
+        run: |
+          chmod +x scripts/annotate-pr-benchmark-link.sh
+          ./scripts/annotate-pr-benchmark-link.sh $GITHUB_HEAD_REF
+
