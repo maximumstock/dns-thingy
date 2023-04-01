@@ -135,7 +135,7 @@ jobs:
     if: github.ref_name != 'master'
     env:
       GH_TOKEN: ${{ github.token }}
-      BRANCH: ${{ github.ref_name	}}
+      BRANCH: ${{ github.head_ref	}}
     steps:
       - uses: actions/checkout@v3
 
