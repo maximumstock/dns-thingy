@@ -97,7 +97,7 @@ jobs:
   benchmark:
     needs: ci
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, 'bench skip')"
+    if: "!contains(github.event.head_commit.message,'bench skip')"
     steps:
       - uses: actions/checkout@v3
 
@@ -132,14 +132,17 @@ jobs:
   benchmark-annotate-pr:
     needs: benchmark
     runs-on: ubuntu-latest
-    if: "github.ref_name != 'master'"
+    if: github.ref_name != 'master'
     env:
       GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ github.head_ref	}}
     steps:
       - uses: actions/checkout@v3
 
       - name: Annotate PR with benchmark artifact links
         run: |
           chmod +x scripts/annotate-pr-benchmark-link.sh
-          ./scripts/annotate-pr-benchmark-link.sh $GITHUB_HEAD_REF
-
+          echo $GITHUB_REF
+          echo $GITHUB_REF_NAME
+          echo $GITHUB_HEAD_REF
+          ./scripts/annotate-pr-benchmark-link.sh $BRANCH
