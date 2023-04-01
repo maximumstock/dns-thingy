@@ -11,7 +11,7 @@ env:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    if: '!contains(github.event.head_commit.message, "ci skip")'
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -70,7 +70,7 @@ jobs:
   docker-build:
     needs: ci
     runs-on: ubuntu-latest
-    if: '!contains(github.event.head_commit.message, "docker skip") && github.ref_name == "master"'
+    if: "!contains(github.event.head_commit.message, 'docker skip') && github.ref_name == 'master'"
     steps:
       - uses: actions/checkout@v3
 
@@ -97,7 +97,7 @@ jobs:
   benchmark:
     needs: ci
     runs-on: ubuntu-latest
-    if: '!contains(github.event.head_commit.message, "bench skip")'
+    if: "!contains(github.event.head_commit.message,'bench skip')"
     steps:
       - uses: actions/checkout@v3
 
@@ -110,7 +110,7 @@ jobs:
       - uses: cachix/cachix-action@v12
         with:
           name: maximumstock
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - uses: actions/download-artifact@v3
         id: download
@@ -132,7 +132,7 @@ jobs:
   benchmark-annotate-pr:
     needs: benchmark
     runs-on: ubuntu-latest
-    if: 'github.ref_name != "master"'
+    if: github.ref_name != 'master'
     env:
       GH_TOKEN: ${{ github.token }}
       BRANCH: ${{ github.ref_name	}}
@@ -142,4 +142,6 @@ jobs:
       - name: Annotate PR with benchmark artifact links
         run: |
           chmod +x scripts/annotate-pr-benchmark-link.sh
+          echo $GITHUB_REF
+          echo $GITHUB_REF_NAME
           ./scripts/annotate-pr-benchmark-link.sh $BRANCH
