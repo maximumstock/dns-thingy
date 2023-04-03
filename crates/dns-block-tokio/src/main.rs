@@ -31,7 +31,7 @@ async fn main() {
         let socket = Arc::clone(&socket);
         let dns = Arc::clone(&dns);
 
-        tokio::task::spawn(async move {
+        tokio::spawn(async move {
             process(&socket, &dns, buf, sender, is_benchmark)
                 .await
                 .unwrap();
@@ -47,7 +47,7 @@ async fn process(
     is_benchmark: bool,
 ) -> Result<(), ()> {
     let (request_id, question) = extract_query_id_and_domain(buf).unwrap();
-    // todo implement async resolve
+
     if apply_domain_filter(&question.domain_name) {
         println!("Blocking request for {:?}", question.domain_name);
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
