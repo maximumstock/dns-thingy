@@ -9,11 +9,11 @@ export PATH="./releases:./target/release:$PATH"
 
 mkdir -p benchmarks/{basic,threaded-4,tokio}
 
-PORT=53000 dns-block &
+DNS_BENCHMARK=true PORT=53000 dns-block &
 echo "Started dns-block"
-PORT=53001 dns-block-threaded &
+DNS_BENCHMARK=true PORT=53001 dns-block-threaded &
 echo "Started dns-block-threaded"
-PORT=53002 dns-block-tokio &
+DNS_BENCHMARK=true PORT=53002 dns-block-tokio &
 echo "Started dns-block-tokio"
 
 sleep 3

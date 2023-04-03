@@ -3,7 +3,7 @@ use std::{net::UdpSocket, time::Duration};
 use dns::{
     dns::generate_response,
     filter::apply_domain_filter,
-    resolver::{extract_query_id_and_domain, resolve_domain},
+    resolver::{extract_query_id_and_domain, resolve_domain, resolve_domain_benchmark},
 };
 
 const DEFAULT_UPSTREAM_DNS: &str = "1.1.1.1:53";
@@ -16,6 +16,9 @@ fn main() {
         .unwrap_or_else(|_| DEFAULT_PORT.into())
         .parse()
         .expect("Port must be a number");
+    let is_benchmark: bool = std::env::var("DNS_BENCHMARK")
+        .map(|x| !x.is_empty())
+        .unwrap_or_else(|_| false);
 
     let incoming_socket = UdpSocket::bind(("0.0.0.0", dns_port)).unwrap();
     let outcoming_socket = UdpSocket::bind(("0.0.0.0", 0)).unwrap();
@@ -23,7 +26,7 @@ fn main() {
         .set_read_timeout(Some(Duration::from_secs(5)))
         .unwrap();
 
-    println!("Started DNS blocker on 127.0.0.1::{dns_port}");
+    println!("Started DNS blocker on 127.0.0.1::{dns_port} [benchmark={is_benchmark}]");
 
     let mut incoming_query = [0; 512];
     loop {
@@ -37,6 +40,18 @@ fn main() {
                     generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
                 incoming_socket.send_to(&nx_response, sender).unwrap();
             } else {
+                if is_benchmark {
+                    let (_, reply) = resolve_domain_benchmark(
+                        &question.domain_name,
+                        &upstream_dns_host,
+                        Some(request_id),
+                        Some(outcoming_socket.try_clone().unwrap()),
+                    )
+                    .unwrap();
+                    incoming_socket.send_to(&reply, sender).unwrap();
+                    continue;
+                }
+
                 match resolve_domain(
                     &question.domain_name,
                     &upstream_dns_host,
