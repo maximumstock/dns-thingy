@@ -1,6 +1,8 @@
-use crate::dns::{encode_domain_name, Answer, DnsParser, Question};
+use crate::dns::{
+    encode_domain_name, generate_response, Answer, DnsParser, Question, ResponseCode,
+};
 
-use std::net::UdpSocket;
+use std::{net::UdpSocket, time::Duration};
 
 /// Resolves INternet A records for `domain` using the DNS server `dns`
 pub fn resolve_domain(
@@ -24,6 +26,17 @@ pub fn resolve_domain(
     })?;
 
     parse_answers(buffer)
+}
+
+pub fn resolve_domain_benchmark(
+    _domain: &str,
+    _dns: &str,
+    id: Option<u16>,
+    _socket: Option<UdpSocket>,
+) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+    let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
+    std::thread::sleep(Duration::from_micros(100));
+    parse_answers(response)
 }
 
 pub async fn resolve_domain_async(
@@ -51,6 +64,17 @@ pub async fn resolve_domain_async(
     })?;
 
     parse_answers(buffer)
+}
+
+pub async fn resolve_domain_async_benchmark(
+    _domain: &str,
+    _dns: &str,
+    id: Option<u16>,
+    _existing_socket: Option<tokio::net::UdpSocket>,
+) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+    let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    parse_answers(response)
 }
 
 fn parse_answers(

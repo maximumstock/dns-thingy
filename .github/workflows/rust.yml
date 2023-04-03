@@ -142,7 +142,4 @@ jobs:
       - name: Annotate PR with benchmark artifact links
         run: |
           chmod +x scripts/annotate-pr-benchmark-link.sh
-          echo $GITHUB_REF
-          echo $GITHUB_REF_NAME
-          echo $GITHUB_HEAD_REF
-          ./scripts/annotate-pr-benchmark-link.sh $BRANCH
+          ./scripts/annotate-pr-benchmark-link.sh $GITHUB_HEAD_REF

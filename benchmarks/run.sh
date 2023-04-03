@@ -9,18 +9,18 @@ export PATH="./releases:./target/release:$PATH"
 
 mkdir -p benchmarks/{basic,threaded-4,tokio}
 
-PORT=53000 dns-block &
+DNS_BENCHMARK=true PORT=53000 dns-block &
 echo "Started dns-block"
-PORT=53001 dns-block-threaded &
+DNS_BENCHMARK=true PORT=53001 dns-block-threaded &
 echo "Started dns-block-threaded"
-PORT=53002 dns-block-tokio &
+DNS_BENCHMARK=true PORT=53002 dns-block-tokio &
 echo "Started dns-block-tokio"
 
 sleep 3
 
 # dns-block
 echo "Starting dns-block benchmark"
-echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53000" -n 1 -t A \
+echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53000" -n 1 -c 3 -t A \
     --recurse \
     --distribution \
     --csv benchmarks/basic/raw.csv \
@@ -30,7 +30,7 @@ echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53000" -n 1 -t A \
 
 # dns-block-threaded
 echo "Starting dns-block-threaded benchmark"
-echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53001" -n 1 -t A \
+echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53001" -n 1 -c 3 -t A \
     --recurse \
     --distribution \
     --csv benchmarks/threaded-4/raw.csv \
@@ -40,7 +40,7 @@ echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53001" -n 1 -t A \
 
 # dns-block-tokio
 echo "Starting dns-block-tokio benchmark"
-echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53002" -n 1 -t A \
+echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53002" -n 1 -c 3 -t A \
     --recurse \
     --distribution \
     --csv benchmarks/tokio/raw.csv \
