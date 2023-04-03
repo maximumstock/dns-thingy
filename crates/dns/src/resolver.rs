@@ -25,7 +25,7 @@ pub fn resolve_domain(
         e
     })?;
 
-    parse_answers(buffer)
+    DnsParser::new(buffer).parse_answers()
 }
 
 pub fn resolve_domain_benchmark(
@@ -36,7 +36,7 @@ pub fn resolve_domain_benchmark(
 ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
     std::thread::sleep(Duration::from_micros(100));
-    parse_answers(response)
+    DnsParser::new(response).parse_answers()
 }
 
 pub async fn resolve_domain_async(
@@ -63,7 +63,7 @@ pub async fn resolve_domain_async(
         e
     })?;
 
-    parse_answers(buffer)
+    DnsParser::new(buffer).parse_answers()
 }
 
 pub async fn resolve_domain_async_benchmark(
@@ -74,24 +74,7 @@ pub async fn resolve_domain_async_benchmark(
 ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
     tokio::time::sleep(Duration::from_millis(100)).await;
-    parse_answers(response)
-}
-
-fn parse_answers(
-    buffer: Vec<u8>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
-    let mut parser = DnsParser::new(buffer);
-    let header = parser.parse_header();
-
-    for _ in 0..header.question_count {
-        parser.parse_question();
-    }
-
-    let answers = (0..header.answer_count)
-        .map(|_| parser.parse_answer())
-        .collect::<Vec<_>>();
-
-    Ok((answers, parser.buf))
+    DnsParser::new(response).parse_answers()
 }
 
 pub fn extract_query_id_and_domain(

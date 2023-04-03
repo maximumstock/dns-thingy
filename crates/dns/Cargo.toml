@@ -8,3 +8,10 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.159", features = ["derive"] }
 tokio = { version = "1.27.0", features = ["full"] }
+
+[dev-dependencies]
+criterion = { version = "0.4", features = ["html_reports"] }
+
+[[bench]]
+name = "dns_parser"
+harness = false

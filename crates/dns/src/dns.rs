@@ -239,6 +239,22 @@ impl DnsParser {
             additional_count: self.take_bytes(2) as u16,
         }
     }
+
+    pub fn parse_answers(
+        mut self,
+    ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+        let header = self.parse_header();
+
+        for _ in 0..header.question_count {
+            self.parse_question();
+        }
+
+        let answers = (0..header.answer_count)
+            .map(|_| self.parse_answer())
+            .collect::<Vec<_>>();
+
+        Ok((answers, self.buf))
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
