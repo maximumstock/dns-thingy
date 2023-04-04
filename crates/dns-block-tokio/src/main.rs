@@ -16,14 +16,25 @@ use dns::{
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct ServerArgs {
+    /// DNS server to forward to
     #[arg(short, long, default_value_t = String::from("1.1.1.1:53"))]
     dns: String,
+
+    /// Port to listen on
     #[arg(short, long, default_value_t = 53000)]
     port: u16,
+
+    /// Whether benchmark mode is enabled, ie. if forwarding should be skipped and to avoid network calls upstream
     #[arg(short, long, default_value_t = false)]
-    is_benchmark: bool,
+    benchmark: bool,
+
+    /// Folder path to save DNS query recordings to
     #[arg(short, long)]
-    record_query_path: Option<String>,
+    recording_folder: Option<String>,
+
+    /// Whether to disable logging
+    #[arg(short, long, default_value_t = false)]
+    quiet: bool,
 }
 
 #[tokio::main]
@@ -38,10 +49,11 @@ async fn main() {
 
     println!(
         "Started DNS blocker on 127.0.0.1::{0} [benchmark={1}]",
-        server_args.port, server_args.is_benchmark
+        server_args.port, server_args.benchmark,
     );
+    println!("Options {:#?}", server_args);
 
-    let query_recorder = setup_query_recorder(&server_args.record_query_path).await;
+    let query_recorder = setup_query_recorder(&server_args.recording_folder).await;
 
     loop {
         let socket = Arc::clone(&socket);
@@ -73,11 +85,13 @@ async fn process(
     let (request_id, question) = extract_query_id_and_domain(buf).unwrap();
 
     if apply_domain_filter(&question.domain_name) {
-        println!("Blocking request for {:?}", question.domain_name);
+        if !server_args.quiet {
+            println!("Blocking request for {:?}", question.domain_name);
+        }
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
         socket.send_to(&nx_response, sender).await.unwrap();
     } else {
-        if server_args.is_benchmark {
+        if server_args.benchmark {
             let (_, reply) =
                 resolve_domain_async_benchmark(&question.domain_name, dns, Some(request_id), None)
                     .await
@@ -88,14 +102,16 @@ async fn process(
         match resolve_domain_async(&question.domain_name, dns, Some(request_id), None).await {
             Ok((_, reply)) => {
                 socket.send_to(&reply, sender).await.unwrap();
-                println!(
-                    "Handled query for {} [{}ms]",
-                    question.domain_name,
-                    std::time::SystemTime::now()
-                        .duration_since(start)
-                        .unwrap()
-                        .as_millis()
-                );
+                if !server_args.quiet {
+                    println!(
+                        "Handled query for {} [{}ms]",
+                        question.domain_name,
+                        std::time::SystemTime::now()
+                            .duration_since(start)
+                            .unwrap()
+                            .as_millis()
+                    );
+                }
             }
             Err(e) => {
                 dbg!(e);
@@ -107,6 +123,8 @@ async fn process(
 async fn setup_query_recorder(
     record_query_path: &Option<String>,
 ) -> Arc<Option<RwLock<tokio::fs::File>>> {
+    // TODO: avoid locks; write buffers to a dedicated tokio task via channels
+    // which writes out the data
     if let Some(path) = record_query_path {
         tokio::fs::create_dir_all(Path::new(path)).await.unwrap();
         println!("Recording queries to {path}");

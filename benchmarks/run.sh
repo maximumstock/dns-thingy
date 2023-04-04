@@ -2,6 +2,8 @@
 
 # set -ex
 
+cargo build --release
+
 DOMAINS_URL="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
 DOMAINS_100=$(curl $DOMAINS_URL | head -n 100)
 
@@ -13,7 +15,7 @@ DNS_BENCHMARK=true PORT=53000 dns-block &
 echo "Started dns-block"
 DNS_BENCHMARK=true PORT=53001 dns-block-threaded &
 echo "Started dns-block-threaded"
-DNS_BENCHMARK=true PORT=53002 dns-block-tokio &
+dns-block-tokio --benchmark --port 53002 --quiet &
 echo "Started dns-block-tokio"
 
 sleep 3
