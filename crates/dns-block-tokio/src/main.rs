@@ -1,3 +1,4 @@
+use clap::Parser;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::UdpSocket;
 
@@ -7,34 +8,43 @@ use dns::{
     resolver::{extract_query_id_and_domain, resolve_domain_async, resolve_domain_async_benchmark},
 };
 
-const DEFAULT_DNS: &str = "1.1.1.1:53";
-const DEFAULT_PORT: &str = "53000";
+#[derive(Parser, Debug)]
+// #[command(author, version, about, long_about = None)]
+struct ServerArgs {
+    #[arg(short, long, default_value_t = String::from("1.1.1.1:53"))]
+    dns: String,
+    #[arg(short, long, default_value_t = 53000)]
+    port: u16,
+    #[arg(short, long, default_value_t = false)]
+    is_benchmark: bool,
+    #[arg(short, long)]
+    record_query_path: String,
+}
 
 #[tokio::main]
 async fn main() {
-    let dns = Arc::new(std::env::var("DNS").unwrap_or_else(|_| DEFAULT_DNS.into()));
-    let port: u16 = std::env::var("PORT")
-        .unwrap_or_else(|_| DEFAULT_PORT.into())
-        .parse()
-        .expect("Port must be a number");
-    let is_benchmark: bool = std::env::var("DNS_BENCHMARK")
-        .map(|x| !x.is_empty())
-        .unwrap_or_else(|_| false);
-    let socket = Arc::new(UdpSocket::bind(("0.0.0.0", port)).await.unwrap());
+    let server_args = ServerArgs::parse();
+    let socket = Arc::new(
+        UdpSocket::bind(("0.0.0.0", server_args.port))
+            .await
+            .unwrap(),
+    );
+    let dns = Arc::new(server_args.dns);
 
-    println!("Started DNS blocker on 127.0.0.1::{port} [benchmark={is_benchmark}]");
+    println!(
+        "Started DNS blocker on 127.0.0.1::{0} [benchmark={1}]",
+        server_args.port, server_args.is_benchmark
+    );
 
     loop {
-        let mut buf = [0; 512];
-        let (_, sender) = socket.recv_from(&mut buf).await.unwrap();
-
         let socket = Arc::clone(&socket);
         let dns = Arc::clone(&dns);
 
+        let mut buf = [0; 512];
+        let (_, sender) = socket.recv_from(&mut buf).await.unwrap();
+
         tokio::spawn(async move {
-            process(&socket, &dns, buf, sender, is_benchmark)
-                .await
-                .unwrap();
+            process(&socket, &dns, buf, sender, server_args.is_benchmark).await;
         });
     }
 }
@@ -45,7 +55,7 @@ async fn process(
     buf: [u8; 512],
     sender: SocketAddr,
     is_benchmark: bool,
-) -> Result<(), ()> {
+) {
     let (request_id, question) = extract_query_id_and_domain(buf).unwrap();
 
     if apply_domain_filter(&question.domain_name) {
@@ -59,7 +69,7 @@ async fn process(
                     .await
                     .unwrap();
             socket.send_to(&reply, sender).await.unwrap();
-            return Ok(());
+            return;
         }
         match resolve_domain_async(&question.domain_name, dns, Some(request_id), None).await {
             Ok((_, reply)) => {
@@ -70,6 +80,4 @@ async fn process(
             }
         }
     }
-
-    Ok(())
 }
