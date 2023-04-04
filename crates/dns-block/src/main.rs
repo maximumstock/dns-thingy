@@ -16,9 +16,7 @@ fn main() {
         .unwrap_or_else(|_| DEFAULT_PORT.into())
         .parse()
         .expect("Port must be a number");
-    let is_benchmark: bool = std::env::var("DNS_BENCHMARK")
-        .map(|x| !x.is_empty())
-        .unwrap_or_else(|_| false);
+    let is_benchmark: bool = std::env::var("DNS_BENCHMARK").is_ok();
 
     let incoming_socket = UdpSocket::bind(("0.0.0.0", dns_port)).unwrap();
     let outcoming_socket = UdpSocket::bind(("0.0.0.0", 0)).unwrap();

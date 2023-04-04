@@ -1,5 +1,11 @@
-use std::{net::SocketAddr, sync::Arc};
-use tokio::net::UdpSocket;
+use clap::Parser;
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::UNIX_EPOCH,
+};
+use tokio::{io::AsyncWriteExt, net::UdpSocket, sync::RwLock};
 
 use dns::{
     dns::generate_response,
@@ -7,34 +13,51 @@ use dns::{
     resolver::{extract_query_id_and_domain, resolve_domain_async, resolve_domain_async_benchmark},
 };
 
-const DEFAULT_DNS: &str = "1.1.1.1:53";
-const DEFAULT_PORT: &str = "53000";
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct ServerArgs {
+    #[arg(short, long, default_value_t = String::from("1.1.1.1:53"))]
+    dns: String,
+    #[arg(short, long, default_value_t = 53000)]
+    port: u16,
+    #[arg(short, long, default_value_t = false)]
+    is_benchmark: bool,
+    #[arg(short, long)]
+    record_query_path: Option<String>,
+}
 
 #[tokio::main]
 async fn main() {
-    let dns = Arc::new(std::env::var("DNS").unwrap_or_else(|_| DEFAULT_DNS.into()));
-    let port: u16 = std::env::var("PORT")
-        .unwrap_or_else(|_| DEFAULT_PORT.into())
-        .parse()
-        .expect("Port must be a number");
-    let is_benchmark: bool = std::env::var("DNS_BENCHMARK")
-        .map(|x| !x.is_empty())
-        .unwrap_or_else(|_| false);
-    let socket = Arc::new(UdpSocket::bind(("0.0.0.0", port)).await.unwrap());
+    let server_args = Arc::new(ServerArgs::parse());
+    let socket = Arc::new(
+        UdpSocket::bind(("0.0.0.0", server_args.port))
+            .await
+            .unwrap(),
+    );
+    let dns = Arc::new(server_args.dns.clone());
 
-    println!("Started DNS blocker on 127.0.0.1::{port} [benchmark={is_benchmark}]");
+    println!(
+        "Started DNS blocker on 127.0.0.1::{0} [benchmark={1}]",
+        server_args.port, server_args.is_benchmark
+    );
+
+    let query_recorder = setup_query_recorder(&server_args.record_query_path).await;
 
     loop {
+        let socket = Arc::clone(&socket);
+        let dns = Arc::clone(&dns);
+        let server_args = Arc::clone(&server_args);
+        let query_recorder = Arc::clone(&query_recorder);
+
         let mut buf = [0; 512];
         let (_, sender) = socket.recv_from(&mut buf).await.unwrap();
 
-        let socket = Arc::clone(&socket);
-        let dns = Arc::clone(&dns);
+        if let Some(ref f) = *query_recorder {
+            f.write().await.write_all(&buf).await.unwrap();
+        }
 
         tokio::spawn(async move {
-            process(&socket, &dns, buf, sender, is_benchmark)
-                .await
-                .unwrap();
+            process(&socket, &dns, buf, sender, &server_args).await;
         });
     }
 }
@@ -44,8 +67,9 @@ async fn process(
     dns: &str,
     buf: [u8; 512],
     sender: SocketAddr,
-    is_benchmark: bool,
-) -> Result<(), ()> {
+    server_args: &ServerArgs,
+) {
+    let start = std::time::SystemTime::now();
     let (request_id, question) = extract_query_id_and_domain(buf).unwrap();
 
     if apply_domain_filter(&question.domain_name) {
@@ -53,23 +77,53 @@ async fn process(
         let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
         socket.send_to(&nx_response, sender).await.unwrap();
     } else {
-        if is_benchmark {
+        if server_args.is_benchmark {
             let (_, reply) =
                 resolve_domain_async_benchmark(&question.domain_name, dns, Some(request_id), None)
                     .await
                     .unwrap();
             socket.send_to(&reply, sender).await.unwrap();
-            return Ok(());
+            return;
         }
         match resolve_domain_async(&question.domain_name, dns, Some(request_id), None).await {
             Ok((_, reply)) => {
                 socket.send_to(&reply, sender).await.unwrap();
+                println!(
+                    "Handled query for {} [{}ms]",
+                    question.domain_name,
+                    std::time::SystemTime::now()
+                        .duration_since(start)
+                        .unwrap()
+                        .as_millis()
+                );
             }
             Err(e) => {
                 dbg!(e);
             }
         }
     }
+}
 
-    Ok(())
+async fn setup_query_recorder(
+    record_query_path: &Option<String>,
+) -> Arc<Option<RwLock<tokio::fs::File>>> {
+    if let Some(path) = record_query_path {
+        tokio::fs::create_dir_all(Path::new(path)).await.unwrap();
+        println!("Recording queries to {path}");
+    }
+
+    Arc::new({
+        if let Some(ref path) = record_query_path {
+            Some(RwLock::new(
+                tokio::fs::File::create(PathBuf::new().join(path).join(format!(
+                    "{}.bin",
+                    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+                )))
+                .await
+                .unwrap(),
+            ))
+        } else {
+            None
+        }
+    })
 }
