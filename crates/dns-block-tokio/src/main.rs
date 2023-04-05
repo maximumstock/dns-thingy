@@ -51,7 +51,7 @@ async fn main() {
         "Started DNS blocker on 127.0.0.1::{0} [benchmark={1}]",
         server_args.port, server_args.benchmark,
     );
-    println!("Options {:#?}", server_args);
+    println!("Options {server_args:#?}");
 
     let query_recorder = setup_query_recorder(&server_args.recording_folder).await;
 
