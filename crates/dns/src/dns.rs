@@ -1,5 +1,12 @@
 use std::net::Ipv4Addr;
 
+use bytes::{BufMut, Bytes, BytesMut};
+
+#[derive(Debug, Clone)]
+pub struct DnsRequest {
+    inner: Bytes,
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Flags {
     pub query: bool,
@@ -64,7 +71,7 @@ impl From<ResponseCode> for u8 {
 pub fn generate_response(
     id: u16,
     response_code: ResponseCode,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+) -> Result<[u8; 512], Box<dyn std::error::Error>> {
     let flags = Flags {
         response_code: response_code.into(),
         query: false,
@@ -77,17 +84,21 @@ pub fn generate_response(
         ..Header::default()
     };
 
-    Ok(header.into())
+    let mut packet = BytesMut::with_capacity(512);
+    let h: [u8; 12] = header.into();
+    packet.extend_from_slice(h.as_slice());
+    packet.put_bytes(0, 500);
+    Ok(packet.to_vec().try_into().unwrap())
 }
 
 #[derive(Debug)]
 pub struct DnsParser {
-    pub buf: Vec<u8>,
+    pub buf: [u8; 512],
     position: usize,
 }
 
 impl DnsParser {
-    pub fn new(buf: Vec<u8>) -> Self {
+    pub fn new(buf: [u8; 512]) -> Self {
         Self { buf, position: 0 }
     }
 
@@ -105,12 +116,14 @@ impl DnsParser {
     }
 
     fn take(&mut self, n: usize) -> Vec<u8> {
+        // TODO: this does not have to allocate, return slice
         let out = self.buf[self.position..].iter().take(n).cloned().collect();
         self.position += n;
         out
     }
 
     fn get<const N: usize>(&self) -> [u8; N] {
+        // TODO: this does not have to allocate, return slice instead of array
         self.buf[self.position..]
             .iter()
             .take(N)
@@ -149,6 +162,7 @@ impl DnsParser {
         if next.eq(&192) {
             return;
         }
+        // TODO: look to do this in one operation
         while next > 0 && next.ne(&192) {
             self.take_bytes(1);
             for c in self.take(next) {
@@ -242,7 +256,7 @@ impl DnsParser {
 
     pub fn parse_answers(
         mut self,
-    ) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
         let header = self.parse_header();
 
         for _ in 0..header.question_count {
@@ -324,11 +338,9 @@ pub struct Header {
     pub additional_count: u16,
 }
 
-impl From<Header> for Vec<u8> {
+impl From<Header> for [u8; 12] {
     fn from(header: Header) -> Self {
-        let mut value = Vec::new();
-        // let mut buf = [0u8; 20];
-        // buf[0] = header.id.to_be_bytes()[0];
+        let mut value = vec![];
         value.extend_from_slice(&header.id.to_be_bytes());
         let raw_flags: u16 = header.flags.into();
         value.extend_from_slice(&raw_flags.to_be_bytes());
@@ -336,7 +348,7 @@ impl From<Header> for Vec<u8> {
         value.extend_from_slice(&header.answer_count.to_be_bytes());
         value.extend_from_slice(&header.authority_count.to_be_bytes());
         value.extend_from_slice(&header.additional_count.to_be_bytes());
-        value
+        value.try_into().unwrap()
     }
 }
 
@@ -364,7 +376,7 @@ pub enum Answer {
 }
 
 pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
-    let mut encoded = Vec::with_capacity(domain_name.len() * 2);
+    let mut encoded = Vec::with_capacity(domain_name.len());
     domain_name.split('.').for_each(|part| {
         encoded.push(part.len() as u8);
         encoded.extend(part.as_bytes());
@@ -376,20 +388,30 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
+    use bytes::{BufMut, BytesMut};
+
     use crate::dns::{encode_domain_name, DnsParser, Flags, Header};
 
     #[test]
     fn test_response_parser_take() {
-        let mut parser = DnsParser::new(vec![0x3, 0x2, 0x1]);
+        let mut input = [0u8; 512];
+        input[0] = 0x3;
+        input[1] = 0x2;
+        input[2] = 0x1;
+        let mut parser = DnsParser::new(input);
         assert_eq!(parser.take_bytes(3), (0x3 << 16) | (0x2 << 8) | 0x1);
-        assert_eq!(parser.buf.len(), 3);
+        assert_eq!(parser.buf.len(), 512);
     }
 
     #[test]
     fn test_response_parser_get() {
-        let parser = DnsParser::new(vec![0x3, 0x2, 0x1]);
+        let mut input = [0u8; 512];
+        input[0] = 0x3;
+        input[1] = 0x2;
+        input[2] = 0x1;
+        let parser = DnsParser::new(input);
         assert_eq!(parser.get::<3>(), [0x3, 0x2, 0x1]);
-        assert_eq!(parser.buf.len(), 3);
+        assert_eq!(parser.buf.len(), 512);
     }
 
     #[test]
@@ -418,8 +440,11 @@ mod tests {
             id: 1234,
             ..Default::default()
         };
-        let serialized_header: Vec<u8> = header.clone().into();
-        let mut parser = DnsParser::new(serialized_header);
+        let mut packet = BytesMut::with_capacity(512);
+        let h: [u8; 12] = header.clone().into();
+        packet.extend_from_slice(h.as_slice());
+        packet.put_bytes(0, 500);
+        let mut parser = DnsParser::new(packet.to_vec().try_into().unwrap());
         let deserialized_header = parser.parse_header();
         assert_eq!(header, deserialized_header);
     }

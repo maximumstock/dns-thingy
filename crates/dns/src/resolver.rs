@@ -10,7 +10,7 @@ pub fn resolve_domain(
     dns: &str,
     id: Option<u16>,
     socket: Option<UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
 
     let request = generate_request(domain, id);
@@ -19,7 +19,7 @@ pub fn resolve_domain(
         return Err(e.into());
     }
 
-    let mut buffer = [0; 512].to_vec();
+    let mut buffer = [0; 512];
     let (_, _) = socket.recv_from(&mut buffer).map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
@@ -33,7 +33,7 @@ pub fn resolve_domain_benchmark(
     _dns: &str,
     id: Option<u16>,
     _socket: Option<UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
     std::thread::sleep(Duration::from_micros(100));
     DnsParser::new(response).parse_answers()
@@ -44,7 +44,7 @@ pub async fn resolve_domain_async(
     dns: &str,
     id: Option<u16>,
     existing_socket: Option<tokio::net::UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let socket = if let Some(x) = existing_socket {
         x
     } else {
@@ -57,7 +57,7 @@ pub async fn resolve_domain_async(
         return Err(e.into());
     }
 
-    let mut buffer = [0; 512].to_vec();
+    let mut buffer = [0; 512];
     let (_, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
@@ -71,7 +71,7 @@ pub async fn resolve_domain_async_benchmark(
     _dns: &str,
     id: Option<u16>,
     _existing_socket: Option<tokio::net::UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
     tokio::time::sleep(Duration::from_millis(100)).await;
     DnsParser::new(response).parse_answers()
@@ -80,7 +80,7 @@ pub async fn resolve_domain_async_benchmark(
 pub fn extract_query_id_and_domain(
     buf: [u8; 512],
 ) -> Result<(u16, Question), Box<dyn std::error::Error>> {
-    let mut parser = DnsParser::new(buf.to_vec());
+    let mut parser = DnsParser::new(buf);
     let header = parser.parse_header();
     Ok((header.id, parser.parse_question()))
 }
