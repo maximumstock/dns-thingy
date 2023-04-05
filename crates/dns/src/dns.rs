@@ -103,6 +103,13 @@ impl<'a> Collate for &'a [u8] {
     }
 }
 
+impl<const N: usize> Collate for [u8; N] {
+    fn collate(self: [u8; N]) -> usize {
+        self.iter()
+            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
+    }
+}
+
 impl<'a> DnsParser<'a> {
     pub fn new(buf: DnsPacketBuffer<'a>) -> Self {
         Self { buf, position: 0 }
@@ -112,20 +119,24 @@ impl<'a> DnsParser<'a> {
         &self.buf[self.position..self.position + n]
     }
 
+    fn peek_n<const N: usize>(&self) -> [u8; N] {
+        self.buf[self.position..self.position + N]
+            .try_into()
+            .unwrap()
+    }
+
     fn advance(&mut self, n: usize) -> &[u8] {
         let out = &self.buf[self.position..self.position + n];
         self.position += n;
         out
     }
 
-    fn read_n_bytes<const N: usize>(&self) -> [u8; N] {
-        self.buf[self.position..]
-            .iter()
-            .take(N)
-            .cloned()
-            .collect::<Vec<_>>()
+    fn advance_n<const N: usize>(&mut self) -> [u8; N] {
+        let out = self.buf[self.position..self.position + N]
             .try_into()
-            .unwrap()
+            .unwrap();
+        self.position += N;
+        out
     }
 
     fn parse_domain_name(&mut self) -> String {
@@ -142,7 +153,7 @@ impl<'a> DnsParser<'a> {
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
         // https://github.com/EmilHernvall/dnsguide/blob/master/chapter1.md
         if self.peek(1).collate().eq(&0xC0) {
-            let offset = self.advance(2).collate() ^ 0xC000;
+            let offset = self.advance_n::<2>().collate() ^ 0xC000;
             let old_position = self.position;
             self.position = offset;
             self.parse_domain_name_rec(buf);
@@ -159,7 +170,7 @@ impl<'a> DnsParser<'a> {
         }
         // TODO: look to do this in one operation
         while next > 0 && next.ne(&192) {
-            self.advance(1).collate();
+            self.advance_n::<1>().collate();
             for c in self.advance(next) {
                 buf.push(*c as char);
             }
@@ -173,14 +184,14 @@ impl<'a> DnsParser<'a> {
             }
         }
         // skip 0 byte at the end
-        self.advance(1);
+        self.advance_n::<1>();
     }
 
     pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
-            r#type: self.advance(2).collate(),
-            class: self.advance(2).collate(),
+            r#type: self.advance_n::<2>().collate(),
+            class: self.advance_n::<2>().collate(),
         }
     }
 
@@ -188,10 +199,10 @@ impl<'a> DnsParser<'a> {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
         let name = self.parse_domain_name();
-        let record_type: RecordType = self.advance(2).collate().into();
-        let class = self.advance(2).collate();
-        let ttl = self.advance(4).collate();
-        let len = self.advance(2).collate();
+        let record_type: RecordType = self.advance_n::<2>().collate().into();
+        let class = self.advance_n::<2>().collate();
+        let ttl = self.advance_n::<4>().collate();
+        let len = self.advance_n::<2>().collate();
 
         let meta = AnswerMeta {
             name,
@@ -203,7 +214,7 @@ impl<'a> DnsParser<'a> {
 
         match record_type {
             RecordType::A => {
-                let ipv4 = self.read_n_bytes::<4>();
+                let ipv4 = self.peek_n::<4>();
                 self.position += 4;
                 Answer::A {
                     meta,
@@ -240,12 +251,12 @@ impl<'a> DnsParser<'a> {
 
     pub fn parse_header(&mut self) -> Header {
         Header {
-            id: self.advance(2).collate() as u16,
-            flags: Flags::from(self.advance(2).collate() as u16),
-            question_count: self.advance(2).collate() as u16,
-            answer_count: self.advance(2).collate() as u16,
-            authority_count: self.advance(2).collate() as u16,
-            additional_count: self.advance(2).collate() as u16,
+            id: self.advance_n::<2>().collate() as u16,
+            flags: Flags::from(self.advance_n::<2>().collate() as u16),
+            question_count: self.advance_n::<2>().collate() as u16,
+            answer_count: self.advance_n::<2>().collate() as u16,
+            authority_count: self.advance_n::<2>().collate() as u16,
+            additional_count: self.advance_n::<2>().collate() as u16,
         }
     }
 
@@ -388,14 +399,17 @@ mod tests {
     #[test]
     fn test_parser_advance() {
         let mut parser = DnsParser::new(&[0x3, 0x2, 0x1]);
-        assert_eq!(parser.advance(3).collate(), (0x3 << 16) | (0x2 << 8) | 0x1);
+        assert_eq!(
+            parser.advance_n::<3>().collate(),
+            (0x3 << 16) | (0x2 << 8) | 0x1
+        );
         assert_eq!(parser.buf.len(), 512);
     }
 
     #[test]
     fn test_parser_get() {
         let parser = DnsParser::new(&[0x3, 0x2, 0x1]);
-        assert_eq!(parser.read_n_bytes::<3>(), [0x3, 0x2, 0x1]);
+        assert_eq!(parser.peek_n::<3>(), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 512);
     }
 
