@@ -56,7 +56,7 @@ fn process(
     is_benchmark: bool,
 ) {
     let (_, sender) = internal_socket.recv_from(incoming_query).unwrap();
-    let (request_id, question) = extract_query_id_and_domain(*incoming_query).unwrap();
+    let (request_id, question) = extract_query_id_and_domain(incoming_query).unwrap();
 
     if apply_domain_filter(&question.domain_name) {
         println!("Blocking request for {:?}", question.domain_name);

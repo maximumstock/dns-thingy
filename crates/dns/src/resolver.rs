@@ -1,5 +1,6 @@
 use crate::dns::{
-    encode_domain_name, generate_response, Answer, DnsParser, Question, ResponseCode,
+    encode_domain_name, generate_response, Answer, DnsPacketBuffer, DnsParser, Question,
+    ResponseCode,
 };
 
 use std::{net::UdpSocket, time::Duration};
@@ -10,7 +11,7 @@ pub fn resolve_domain(
     dns: &str,
     id: Option<u16>,
     socket: Option<UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
 
     let request = generate_request(domain, id);
@@ -19,13 +20,14 @@ pub fn resolve_domain(
         return Err(e.into());
     }
 
-    let mut buffer = [0; 512].to_vec();
-    let (_, _) = socket.recv_from(&mut buffer).map_err(|e| {
+    let mut response = [0; 512];
+    let (_, _) = socket.recv_from(&mut response).map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
 
-    parse_answers(buffer)
+    let answers = DnsParser::new(&response).parse_answers()?;
+    Ok((answers, response))
 }
 
 pub fn resolve_domain_benchmark(
@@ -33,10 +35,11 @@ pub fn resolve_domain_benchmark(
     _dns: &str,
     id: Option<u16>,
     _socket: Option<UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
-    std::thread::sleep(Duration::from_micros(100));
-    parse_answers(response)
+    std::thread::sleep(Duration::from_millis(100));
+    let answers = DnsParser::new(&response).parse_answers()?;
+    Ok((answers, response))
 }
 
 pub async fn resolve_domain_async(
@@ -44,7 +47,7 @@ pub async fn resolve_domain_async(
     dns: &str,
     id: Option<u16>,
     existing_socket: Option<tokio::net::UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let socket = if let Some(x) = existing_socket {
         x
     } else {
@@ -57,13 +60,14 @@ pub async fn resolve_domain_async(
         return Err(e.into());
     }
 
-    let mut buffer = [0; 512].to_vec();
-    let (_, _) = socket.recv_from(&mut buffer).await.map_err(|e| {
+    let mut response = [0; 512];
+    let (_, _) = socket.recv_from(&mut response).await.map_err(|e| {
         println!("Failed to receive response for {domain} from {dns:?}: {e:?}");
         e
     })?;
 
-    parse_answers(buffer)
+    let answers = DnsParser::new(&response).parse_answers()?;
+    Ok((answers, response))
 }
 
 pub async fn resolve_domain_async_benchmark(
@@ -71,33 +75,17 @@ pub async fn resolve_domain_async_benchmark(
     _dns: &str,
     id: Option<u16>,
     _existing_socket: Option<tokio::net::UdpSocket>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
     tokio::time::sleep(Duration::from_millis(100)).await;
-    parse_answers(response)
-}
-
-fn parse_answers(
-    buffer: Vec<u8>,
-) -> Result<(Vec<Answer>, Vec<u8>), Box<dyn std::error::Error + Send + Sync>> {
-    let mut parser = DnsParser::new(buffer);
-    let header = parser.parse_header();
-
-    for _ in 0..header.question_count {
-        parser.parse_question();
-    }
-
-    let answers = (0..header.answer_count)
-        .map(|_| parser.parse_answer())
-        .collect::<Vec<_>>();
-
-    Ok((answers, parser.buf))
+    let answers = DnsParser::new(&response).parse_answers()?;
+    Ok((answers, response))
 }
 
 pub fn extract_query_id_and_domain(
-    buf: [u8; 512],
+    buf: DnsPacketBuffer,
 ) -> Result<(u16, Question), Box<dyn std::error::Error>> {
-    let mut parser = DnsParser::new(buf.to_vec());
+    let mut parser = DnsParser::new(buf);
     let header = parser.parse_header();
     Ok((header.id, parser.parse_question()))
 }

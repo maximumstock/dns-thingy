@@ -64,7 +64,7 @@ impl From<ResponseCode> for u8 {
 pub fn generate_response(
     id: u16,
     response_code: ResponseCode,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+) -> Result<[u8; 512], Box<dyn std::error::Error>> {
     let flags = Flags {
         response_code: response_code.into(),
         query: false,
@@ -77,47 +77,66 @@ pub fn generate_response(
         ..Header::default()
     };
 
-    Ok(header.into())
+    let mut packet = Vec::with_capacity(512);
+    let h: [u8; 12] = header.into();
+    packet.extend_from_slice(h.as_slice());
+    packet.extend_from_slice(&[0; 500]);
+    Ok(packet.try_into().unwrap())
 }
 
+pub type DnsPacketBuffer<'a> = &'a [u8];
+
 #[derive(Debug)]
-pub struct DnsParser {
-    pub buf: Vec<u8>,
+pub struct DnsParser<'a> {
+    pub buf: DnsPacketBuffer<'a>,
     position: usize,
 }
 
-impl DnsParser {
-    pub fn new(buf: Vec<u8>) -> Self {
+pub trait Collate {
+    fn collate(self) -> usize;
+}
+
+impl<'a> Collate for &'a [u8] {
+    fn collate(self: &'a [u8]) -> usize {
+        self.iter()
+            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
+    }
+}
+
+impl<const N: usize> Collate for [u8; N] {
+    fn collate(self: [u8; N]) -> usize {
+        self.iter()
+            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
+    }
+}
+
+impl<'a> DnsParser<'a> {
+    pub fn new(buf: DnsPacketBuffer<'a>) -> Self {
         Self { buf, position: 0 }
     }
 
-    fn take_bytes(&mut self, n: usize) -> usize {
-        let out = self.peek_bytes(n);
-        self.position += n;
-        out
+    fn peek(&self, n: usize) -> &[u8] {
+        &self.buf[self.position..self.position + n]
     }
 
-    fn peek_bytes(&self, n: usize) -> usize {
-        self.buf[self.position..]
-            .iter()
-            .take(n)
-            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
-    }
-
-    fn take(&mut self, n: usize) -> Vec<u8> {
-        let out = self.buf[self.position..].iter().take(n).cloned().collect();
-        self.position += n;
-        out
-    }
-
-    fn get<const N: usize>(&self) -> [u8; N] {
-        self.buf[self.position..]
-            .iter()
-            .take(N)
-            .cloned()
-            .collect::<Vec<_>>()
+    fn peek_n<const N: usize>(&self) -> [u8; N] {
+        self.buf[self.position..self.position + N]
             .try_into()
             .unwrap()
+    }
+
+    fn advance(&mut self, n: usize) -> &[u8] {
+        let out = &self.buf[self.position..self.position + n];
+        self.position += n;
+        out
+    }
+
+    fn advance_n<const N: usize>(&mut self) -> [u8; N] {
+        let out = self.buf[self.position..self.position + N]
+            .try_into()
+            .unwrap();
+        self.position += N;
+        out
     }
 
     fn parse_domain_name(&mut self) -> String {
@@ -133,8 +152,8 @@ impl DnsParser {
         // parse query (again)
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
         // https://github.com/EmilHernvall/dnsguide/blob/master/chapter1.md
-        if self.peek_bytes(1).eq(&0xC0) {
-            let offset = self.take_bytes(2) ^ 0xC000;
+        if self.peek(1).collate().eq(&0xC0) {
+            let offset = self.advance_n::<2>().collate() ^ 0xC000;
             let old_position = self.position;
             self.position = offset;
             self.parse_domain_name_rec(buf);
@@ -145,16 +164,17 @@ impl DnsParser {
     }
 
     fn parse_domain_name_inline(&mut self, buf: &mut String) {
-        let mut next = self.peek_bytes(1);
+        let mut next = self.peek(1).collate();
         if next.eq(&192) {
             return;
         }
+        // TODO: look to do this in one operation
         while next > 0 && next.ne(&192) {
-            self.take_bytes(1);
-            for c in self.take(next) {
-                buf.push(c as char);
+            self.advance_n::<1>().collate();
+            for c in self.advance(next) {
+                buf.push(*c as char);
             }
-            next = self.peek_bytes(1);
+            next = self.peek(1).collate();
             if next > 0 {
                 buf.push('.');
             }
@@ -163,15 +183,15 @@ impl DnsParser {
                 return;
             }
         }
-        // take 0 octet
-        self.take_bytes(1);
+        // skip 0 byte at the end
+        self.advance_n::<1>();
     }
 
-    pub fn parse_question(self: &mut DnsParser) -> Question {
+    pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
-            r#type: self.take_bytes(2),
-            class: self.take_bytes(2),
+            r#type: self.advance_n::<2>().collate(),
+            class: self.advance_n::<2>().collate(),
         }
     }
 
@@ -179,10 +199,10 @@ impl DnsParser {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
         let name = self.parse_domain_name();
-        let record_type: RecordType = self.take_bytes(2).into();
-        let class = self.take_bytes(2);
-        let ttl = self.take_bytes(4);
-        let len = self.take_bytes(2);
+        let record_type: RecordType = self.advance_n::<2>().collate().into();
+        let class = self.advance_n::<2>().collate();
+        let ttl = self.advance_n::<4>().collate();
+        let len = self.advance_n::<2>().collate();
 
         let meta = AnswerMeta {
             name,
@@ -194,7 +214,7 @@ impl DnsParser {
 
         match record_type {
             RecordType::A => {
-                let ipv4 = self.get::<4>();
+                let ipv4 = self.peek_n::<4>();
                 self.position += 4;
                 Answer::A {
                     meta,
@@ -231,13 +251,29 @@ impl DnsParser {
 
     pub fn parse_header(&mut self) -> Header {
         Header {
-            id: self.take_bytes(2) as u16,
-            flags: Flags::from(self.take_bytes(2) as u16),
-            question_count: self.take_bytes(2) as u16,
-            answer_count: self.take_bytes(2) as u16,
-            authority_count: self.take_bytes(2) as u16,
-            additional_count: self.take_bytes(2) as u16,
+            id: self.advance_n::<2>().collate() as u16,
+            flags: Flags::from(self.advance_n::<2>().collate() as u16),
+            question_count: self.advance_n::<2>().collate() as u16,
+            answer_count: self.advance_n::<2>().collate() as u16,
+            authority_count: self.advance_n::<2>().collate() as u16,
+            additional_count: self.advance_n::<2>().collate() as u16,
         }
+    }
+
+    pub fn parse_answers(
+        mut self,
+    ) -> Result<Vec<Answer>, Box<dyn std::error::Error + Send + Sync>> {
+        let header = self.parse_header();
+
+        for _ in 0..header.question_count {
+            self.parse_question();
+        }
+
+        let answers = (0..header.answer_count)
+            .map(|_| self.parse_answer())
+            .collect::<Vec<_>>();
+
+        Ok(answers)
     }
 }
 
@@ -308,11 +344,9 @@ pub struct Header {
     pub additional_count: u16,
 }
 
-impl From<Header> for Vec<u8> {
+impl From<Header> for [u8; 12] {
     fn from(header: Header) -> Self {
-        let mut value = Vec::new();
-        // let mut buf = [0u8; 20];
-        // buf[0] = header.id.to_be_bytes()[0];
+        let mut value = vec![];
         value.extend_from_slice(&header.id.to_be_bytes());
         let raw_flags: u16 = header.flags.into();
         value.extend_from_slice(&raw_flags.to_be_bytes());
@@ -320,7 +354,7 @@ impl From<Header> for Vec<u8> {
         value.extend_from_slice(&header.answer_count.to_be_bytes());
         value.extend_from_slice(&header.authority_count.to_be_bytes());
         value.extend_from_slice(&header.additional_count.to_be_bytes());
-        value
+        value.try_into().unwrap()
     }
 }
 
@@ -348,7 +382,7 @@ pub enum Answer {
 }
 
 pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
-    let mut encoded = Vec::with_capacity(domain_name.len() * 2);
+    let mut encoded = Vec::with_capacity(domain_name.len());
     domain_name.split('.').for_each(|part| {
         encoded.push(part.len() as u8);
         encoded.extend(part.as_bytes());
@@ -360,19 +394,22 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use crate::dns::{encode_domain_name, DnsParser, Flags, Header};
+    use crate::dns::{encode_domain_name, Collate, DnsParser, Flags, Header};
 
     #[test]
-    fn test_response_parser_take() {
-        let mut parser = DnsParser::new(vec![0x3, 0x2, 0x1]);
-        assert_eq!(parser.take_bytes(3), (0x3 << 16) | (0x2 << 8) | 0x1);
+    fn test_parser_advance() {
+        let mut parser = DnsParser::new(&[0x3, 0x2, 0x1]);
+        assert_eq!(
+            parser.advance_n::<3>().collate(),
+            (0x3 << 16) | (0x2 << 8) | 0x1
+        );
         assert_eq!(parser.buf.len(), 3);
     }
 
     #[test]
-    fn test_response_parser_get() {
-        let parser = DnsParser::new(vec![0x3, 0x2, 0x1]);
-        assert_eq!(parser.get::<3>(), [0x3, 0x2, 0x1]);
+    fn test_parser_get() {
+        let parser = DnsParser::new(&[0x3, 0x2, 0x1]);
+        assert_eq!(parser.peek_n::<3>(), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 3);
     }
 
@@ -402,8 +439,13 @@ mod tests {
             id: 1234,
             ..Default::default()
         };
-        let serialized_header: Vec<u8> = header.clone().into();
-        let mut parser = DnsParser::new(serialized_header);
+
+        let mut packet = vec![];
+        let h: [u8; 12] = header.clone().into();
+        packet.extend_from_slice(h.as_slice());
+        packet.extend_from_slice(&[0; 500]);
+
+        let mut parser = DnsParser::new(packet.as_slice());
         let deserialized_header = parser.parse_header();
         assert_eq!(header, deserialized_header);
     }
