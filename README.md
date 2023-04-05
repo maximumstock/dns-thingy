@@ -17,12 +17,12 @@ This workspace project consists of the following subcrates in `crates`:
 
 ## TODO
 
-- [ ] perf: optimise buffer allocation
-- [ ] bench: don't actually send out queries during benchmarks to eliminate network & upstream performance from the benchmark
-- [ ] add custom blocking rules
-- [ ] cache records according to answer TTL
-- [ ] implement more record types
-- [ ] request builder
+- [ ] feat: add custom blocking rules
+- [ ] feat: cache records according to answer TTL
+- [ ] feat: implement more record types
+- [ ] api: request builder for DNS queries & responses
+- [x] perf: optimise buffer allocation
+- [x] bench: don't actually send out queries during benchmarks to eliminate network & upstream performance from the benchmark
 - [x] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
 
 ## Performance Evaluation
