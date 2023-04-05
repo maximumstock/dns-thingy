@@ -37,7 +37,7 @@ pub fn resolve_domain_benchmark(
     _socket: Option<UdpSocket>,
 ) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
-    std::thread::sleep(Duration::from_micros(100));
+    std::thread::sleep(Duration::from_millis(100));
     let answers = DnsParser::new(&response).parse_answers()?;
     Ok((answers, response))
 }
