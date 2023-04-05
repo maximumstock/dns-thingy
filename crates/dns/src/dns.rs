@@ -403,14 +403,14 @@ mod tests {
             parser.advance_n::<3>().collate(),
             (0x3 << 16) | (0x2 << 8) | 0x1
         );
-        assert_eq!(parser.buf.len(), 512);
+        assert_eq!(parser.buf.len(), 3);
     }
 
     #[test]
     fn test_parser_get() {
         let parser = DnsParser::new(&[0x3, 0x2, 0x1]);
         assert_eq!(parser.peek_n::<3>(), [0x3, 0x2, 0x1]);
-        assert_eq!(parser.buf.len(), 512);
+        assert_eq!(parser.buf.len(), 3);
     }
 
     #[test]
@@ -440,7 +440,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut packet = [0u8; 512].to_vec();
+        let mut packet = vec![];
         let h: [u8; 12] = header.clone().into();
         packet.extend_from_slice(h.as_slice());
         packet.extend_from_slice(&[0; 500]);
