@@ -11,7 +11,7 @@ fn dns_parser(c: &mut Criterion) {
         let queries = dns_queries.clone();
         b.iter(|| {
             for p in queries.clone().into_iter() {
-                DnsParser::new(black_box(p.try_into().unwrap())).parse_question();
+                DnsParser::new(black_box(&p.try_into().unwrap())).parse_question();
             }
         });
     });
@@ -20,7 +20,7 @@ fn dns_parser(c: &mut Criterion) {
         let queries = dns_queries.clone();
         b.iter(|| {
             for p in queries.clone().into_iter() {
-                DnsParser::new(black_box(p.try_into().unwrap()))
+                DnsParser::new(black_box(&p.try_into().unwrap()))
                     .parse_answers()
                     .unwrap();
             }

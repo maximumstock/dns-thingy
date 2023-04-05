@@ -91,14 +91,16 @@ pub fn generate_response(
     Ok(packet.to_vec().try_into().unwrap())
 }
 
+type DnsPacketBuffer = [u8; 512];
+
 #[derive(Debug)]
-pub struct DnsParser {
-    pub buf: [u8; 512],
+pub struct DnsParser<'a> {
+    pub buf: &'a DnsPacketBuffer,
     position: usize,
 }
 
-impl DnsParser {
-    pub fn new(buf: [u8; 512]) -> Self {
+impl<'a> DnsParser<'a> {
+    pub fn new(buf: &'a DnsPacketBuffer) -> Self {
         Self { buf, position: 0 }
     }
 
@@ -181,7 +183,7 @@ impl DnsParser {
         self.take_bytes(1);
     }
 
-    pub fn parse_question(self: &mut DnsParser) -> Question {
+    pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
             r#type: self.take_bytes(2),
@@ -256,7 +258,7 @@ impl DnsParser {
 
     pub fn parse_answers(
         mut self,
-    ) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<Answer>, Box<dyn std::error::Error + Send + Sync>> {
         let header = self.parse_header();
 
         for _ in 0..header.question_count {
@@ -267,7 +269,7 @@ impl DnsParser {
             .map(|_| self.parse_answer())
             .collect::<Vec<_>>();
 
-        Ok((answers, self.buf))
+        Ok(answers)
     }
 }
 
@@ -398,7 +400,7 @@ mod tests {
         input[0] = 0x3;
         input[1] = 0x2;
         input[2] = 0x1;
-        let mut parser = DnsParser::new(input);
+        let mut parser = DnsParser::new(&input);
         assert_eq!(parser.take_bytes(3), (0x3 << 16) | (0x2 << 8) | 0x1);
         assert_eq!(parser.buf.len(), 512);
     }
@@ -409,7 +411,7 @@ mod tests {
         input[0] = 0x3;
         input[1] = 0x2;
         input[2] = 0x1;
-        let parser = DnsParser::new(input);
+        let parser = DnsParser::new(&input);
         assert_eq!(parser.get::<3>(), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 512);
     }
@@ -444,7 +446,8 @@ mod tests {
         let h: [u8; 12] = header.clone().into();
         packet.extend_from_slice(h.as_slice());
         packet.put_bytes(0, 500);
-        let mut parser = DnsParser::new(packet.to_vec().try_into().unwrap());
+        let p: [u8; 512] = packet.to_vec().try_into().unwrap();
+        let mut parser = DnsParser::new(&p);
         let deserialized_header = parser.parse_header();
         assert_eq!(header, deserialized_header);
     }

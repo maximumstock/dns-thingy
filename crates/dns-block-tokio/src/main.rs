@@ -69,7 +69,7 @@ async fn main() {
         }
 
         tokio::spawn(async move {
-            process(&socket, &dns, buf, sender, &server_args).await;
+            process(&socket, &dns, &buf, sender, &server_args).await;
         });
     }
 }
@@ -77,7 +77,7 @@ async fn main() {
 async fn process(
     socket: &tokio::net::UdpSocket,
     dns: &str,
-    buf: [u8; 512],
+    buf: &[u8; 512],
     sender: SocketAddr,
     server_args: &ServerArgs,
 ) {
