@@ -1,12 +1,5 @@
 use std::net::Ipv4Addr;
 
-use bytes::{BufMut, Bytes, BytesMut};
-
-#[derive(Debug, Clone)]
-pub struct DnsRequest {
-    inner: Bytes,
-}
-
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Flags {
     pub query: bool,
@@ -84,32 +77,34 @@ pub fn generate_response(
         ..Header::default()
     };
 
-    let mut packet = BytesMut::with_capacity(512);
+    let mut packet = Vec::with_capacity(512);
     let h: [u8; 12] = header.into();
     packet.extend_from_slice(h.as_slice());
-    packet.put_bytes(0, 500);
-    Ok(packet.to_vec().try_into().unwrap())
+    packet.extend_from_slice(&[0; 500]);
+    Ok(packet.try_into().unwrap())
 }
 
-type DnsPacketBuffer = [u8; 512];
+pub type DnsPacketBuffer<'a> = &'a [u8];
 
 #[derive(Debug)]
 pub struct DnsParser<'a> {
-    pub buf: &'a DnsPacketBuffer,
+    pub buf: DnsPacketBuffer<'a>,
     position: usize,
 }
 
 impl<'a> DnsParser<'a> {
-    pub fn new(buf: &'a DnsPacketBuffer) -> Self {
+    pub fn new(buf: DnsPacketBuffer<'a>) -> Self {
         Self { buf, position: 0 }
     }
 
+    // TODO: refactor to collate
     fn take_bytes(&mut self, n: usize) -> usize {
         let out = self.peek_bytes(n);
         self.position += n;
         out
     }
 
+    // TODO: refactor to collate
     fn peek_bytes(&self, n: usize) -> usize {
         self.buf[self.position..]
             .iter()
@@ -124,7 +119,7 @@ impl<'a> DnsParser<'a> {
         out
     }
 
-    fn get<const N: usize>(&self) -> [u8; N] {
+    fn read_n_bytes<const N: usize>(&self) -> [u8; N] {
         // TODO: this does not have to allocate, return slice instead of array
         self.buf[self.position..]
             .iter()
@@ -210,7 +205,7 @@ impl<'a> DnsParser<'a> {
 
         match record_type {
             RecordType::A => {
-                let ipv4 = self.get::<4>();
+                let ipv4 = self.read_n_bytes::<4>();
                 self.position += 4;
                 Answer::A {
                     meta,
@@ -390,29 +385,19 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use bytes::{BufMut, BytesMut};
-
     use crate::dns::{encode_domain_name, DnsParser, Flags, Header};
 
     #[test]
     fn test_response_parser_take() {
-        let mut input = [0u8; 512];
-        input[0] = 0x3;
-        input[1] = 0x2;
-        input[2] = 0x1;
-        let mut parser = DnsParser::new(&input);
+        let mut parser = DnsParser::new(&[0x3, 0x2, 0x1]);
         assert_eq!(parser.take_bytes(3), (0x3 << 16) | (0x2 << 8) | 0x1);
         assert_eq!(parser.buf.len(), 512);
     }
 
     #[test]
     fn test_response_parser_get() {
-        let mut input = [0u8; 512];
-        input[0] = 0x3;
-        input[1] = 0x2;
-        input[2] = 0x1;
-        let parser = DnsParser::new(&input);
-        assert_eq!(parser.get::<3>(), [0x3, 0x2, 0x1]);
+        let parser = DnsParser::new(&[0x3, 0x2, 0x1]);
+        assert_eq!(parser.read_n_bytes::<3>(), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 512);
     }
 
@@ -442,12 +427,13 @@ mod tests {
             id: 1234,
             ..Default::default()
         };
-        let mut packet = BytesMut::with_capacity(512);
+
+        let mut packet = [0u8; 512].to_vec();
         let h: [u8; 12] = header.clone().into();
         packet.extend_from_slice(h.as_slice());
-        packet.put_bytes(0, 500);
-        let p: [u8; 512] = packet.to_vec().try_into().unwrap();
-        let mut parser = DnsParser::new(&p);
+        packet.extend_from_slice(&[0; 500]);
+
+        let mut parser = DnsParser::new(packet.as_slice());
         let deserialized_header = parser.parse_header();
         assert_eq!(header, deserialized_header);
     }

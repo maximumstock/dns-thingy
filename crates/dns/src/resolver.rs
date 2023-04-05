@@ -1,5 +1,6 @@
 use crate::dns::{
-    encode_domain_name, generate_response, Answer, DnsParser, Question, ResponseCode,
+    encode_domain_name, generate_response, Answer, DnsPacketBuffer, DnsParser, Question,
+    ResponseCode,
 };
 
 use std::{net::UdpSocket, time::Duration};
@@ -82,7 +83,7 @@ pub async fn resolve_domain_async_benchmark(
 }
 
 pub fn extract_query_id_and_domain(
-    buf: &[u8; 512],
+    buf: DnsPacketBuffer,
 ) -> Result<(u16, Question), Box<dyn std::error::Error>> {
     let mut parser = DnsParser::new(buf);
     let header = parser.parse_header();

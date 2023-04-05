@@ -7,22 +7,18 @@ fn dns_parser(c: &mut Criterion) {
         .map(|c| c.to_vec())
         .collect();
 
-    c.bench_function("question parsing", |b| {
-        let queries = dns_queries.clone();
+    c.bench_function("answers parsing", |b| {
         b.iter(|| {
-            for p in queries.clone().into_iter() {
-                DnsParser::new(black_box(&p.try_into().unwrap())).parse_question();
+            for p in dns_queries.iter() {
+                DnsParser::new(black_box(p)).parse_answers().unwrap();
             }
         });
     });
 
-    c.bench_function("answers parsing", |b| {
-        let queries = dns_queries.clone();
+    c.bench_function("questions parsing", |b| {
         b.iter(|| {
-            for p in queries.clone().into_iter() {
-                DnsParser::new(black_box(&p.try_into().unwrap()))
-                    .parse_answers()
-                    .unwrap();
+            for p in dns_queries.iter() {
+                DnsParser::new(black_box(p)).parse_question();
             }
         });
     });
