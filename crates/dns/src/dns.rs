@@ -92,35 +92,33 @@ pub struct DnsParser<'a> {
     position: usize,
 }
 
+pub trait Collate {
+    fn collate(self) -> usize;
+}
+
+impl<'a> Collate for &'a [u8] {
+    fn collate(self: &'a [u8]) -> usize {
+        self.iter()
+            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
+    }
+}
+
 impl<'a> DnsParser<'a> {
     pub fn new(buf: DnsPacketBuffer<'a>) -> Self {
         Self { buf, position: 0 }
     }
 
-    // TODO: refactor to collate
-    fn take_bytes(&mut self, n: usize) -> usize {
-        let out = self.peek_bytes(n);
-        self.position += n;
-        out
+    fn peek(&self, n: usize) -> &[u8] {
+        &self.buf[self.position..self.position + n]
     }
 
-    // TODO: refactor to collate
-    fn peek_bytes(&self, n: usize) -> usize {
-        self.buf[self.position..]
-            .iter()
-            .take(n)
-            .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
-    }
-
-    fn take(&mut self, n: usize) -> Vec<u8> {
-        // TODO: this does not have to allocate, return slice
-        let out = self.buf[self.position..].iter().take(n).cloned().collect();
+    fn advance(&mut self, n: usize) -> &[u8] {
+        let out = &self.buf[self.position..self.position + n];
         self.position += n;
         out
     }
 
     fn read_n_bytes<const N: usize>(&self) -> [u8; N] {
-        // TODO: this does not have to allocate, return slice instead of array
         self.buf[self.position..]
             .iter()
             .take(N)
@@ -143,8 +141,8 @@ impl<'a> DnsParser<'a> {
         // parse query (again)
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
         // https://github.com/EmilHernvall/dnsguide/blob/master/chapter1.md
-        if self.peek_bytes(1).eq(&0xC0) {
-            let offset = self.take_bytes(2) ^ 0xC000;
+        if self.peek(1).collate().eq(&0xC0) {
+            let offset = self.advance(2).collate() ^ 0xC000;
             let old_position = self.position;
             self.position = offset;
             self.parse_domain_name_rec(buf);
@@ -155,17 +153,17 @@ impl<'a> DnsParser<'a> {
     }
 
     fn parse_domain_name_inline(&mut self, buf: &mut String) {
-        let mut next = self.peek_bytes(1);
+        let mut next = self.peek(1).collate();
         if next.eq(&192) {
             return;
         }
         // TODO: look to do this in one operation
         while next > 0 && next.ne(&192) {
-            self.take_bytes(1);
-            for c in self.take(next) {
-                buf.push(c as char);
+            self.advance(1).collate();
+            for c in self.advance(next) {
+                buf.push(*c as char);
             }
-            next = self.peek_bytes(1);
+            next = self.peek(1).collate();
             if next > 0 {
                 buf.push('.');
             }
@@ -174,15 +172,15 @@ impl<'a> DnsParser<'a> {
                 return;
             }
         }
-        // take 0 octet
-        self.take_bytes(1);
+        // skip 0 byte at the end
+        self.advance(1);
     }
 
     pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
-            r#type: self.take_bytes(2),
-            class: self.take_bytes(2),
+            r#type: self.advance(2).collate(),
+            class: self.advance(2).collate(),
         }
     }
 
@@ -190,10 +188,10 @@ impl<'a> DnsParser<'a> {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
         let name = self.parse_domain_name();
-        let record_type: RecordType = self.take_bytes(2).into();
-        let class = self.take_bytes(2);
-        let ttl = self.take_bytes(4);
-        let len = self.take_bytes(2);
+        let record_type: RecordType = self.advance(2).collate().into();
+        let class = self.advance(2).collate();
+        let ttl = self.advance(4).collate();
+        let len = self.advance(2).collate();
 
         let meta = AnswerMeta {
             name,
@@ -242,12 +240,12 @@ impl<'a> DnsParser<'a> {
 
     pub fn parse_header(&mut self) -> Header {
         Header {
-            id: self.take_bytes(2) as u16,
-            flags: Flags::from(self.take_bytes(2) as u16),
-            question_count: self.take_bytes(2) as u16,
-            answer_count: self.take_bytes(2) as u16,
-            authority_count: self.take_bytes(2) as u16,
-            additional_count: self.take_bytes(2) as u16,
+            id: self.advance(2).collate() as u16,
+            flags: Flags::from(self.advance(2).collate() as u16),
+            question_count: self.advance(2).collate() as u16,
+            answer_count: self.advance(2).collate() as u16,
+            authority_count: self.advance(2).collate() as u16,
+            additional_count: self.advance(2).collate() as u16,
         }
     }
 
@@ -385,17 +383,17 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use crate::dns::{encode_domain_name, DnsParser, Flags, Header};
+    use crate::dns::{encode_domain_name, Collate, DnsParser, Flags, Header};
 
     #[test]
-    fn test_response_parser_take() {
+    fn test_parser_advance() {
         let mut parser = DnsParser::new(&[0x3, 0x2, 0x1]);
-        assert_eq!(parser.take_bytes(3), (0x3 << 16) | (0x2 << 8) | 0x1);
+        assert_eq!(parser.advance(3).collate(), (0x3 << 16) | (0x2 << 8) | 0x1);
         assert_eq!(parser.buf.len(), 512);
     }
 
     #[test]
-    fn test_response_parser_get() {
+    fn test_parser_get() {
         let parser = DnsParser::new(&[0x3, 0x2, 0x1]);
         assert_eq!(parser.read_n_bytes::<3>(), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 512);
