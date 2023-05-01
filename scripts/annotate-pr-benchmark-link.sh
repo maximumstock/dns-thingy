@@ -4,9 +4,10 @@
 
 BRANCH=$1
 
-# Get latest, successful runs for master and $BRANCH
+# Get latest, successful run for master
 MASTER_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=master&status=completed" | jq '[.workflow_runs[]|select(.conclusion=="success")][0]')
-BRANCH_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=$BRANCH&status=completed" | jq '[.workflow_runs[]|select(.conclusion=="success")][0]')
+# Get latest run for $BRANCH as it most likely contains the latest, succesful benchmark job
+BRANCH_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=$BRANCH&status=completed" | jq '.workflow_runs[0]')
 
 MASTER_SUITE_ID=$(echo "$MASTER_RUN" | jq ".check_suite_id")
 BRANCH_SUITE_ID=$(echo "$BRANCH_RUN" | jq ".check_suite_id")
