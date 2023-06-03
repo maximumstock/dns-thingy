@@ -11,7 +11,7 @@ serde = { version = "1.0.160", features = ["derive"] }
 tokio = { version = "1.28.2", features = ["full"] }
 
 [dev-dependencies]
-criterion = { version = "0.4", features = ["html_reports"] }
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
 name = "dns_parser"
