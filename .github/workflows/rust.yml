@@ -132,6 +132,7 @@ jobs:
   benchmark-annotate-pr:
     permissions:
       actions: write
+      issues: write
     needs: benchmark
     runs-on: ubuntu-latest
     if: github.ref_name != 'master'
