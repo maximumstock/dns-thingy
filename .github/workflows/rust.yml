@@ -130,6 +130,8 @@ jobs:
           path: benchmarks
 
   benchmark-annotate-pr:
+    permissions:
+      actions: write
     needs: benchmark
     runs-on: ubuntu-latest
     if: github.ref_name != 'master'
