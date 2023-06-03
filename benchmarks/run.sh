@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# set -ex
+set -e
 
 DOMAINS_URL="https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains"
-DOMAINS_100=$(curl $DOMAINS_URL | head -n 100)
+DOMAINS_100=$(curl -s "$DOMAINS_URL" | head -n 100)
 
 export PATH="./releases:./target/release:$PATH"
 
