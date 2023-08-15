@@ -3,6 +3,7 @@
 # Usage: ./annotate-pr-benchmark-link.sh <branch-name>
 
 BRANCH=$1
+ORG_HEAD=maximumstock
 
 # Get latest, successful run for master
 MASTER_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=master&status=completed" | jq '[.workflow_runs[]|select(.conclusion=="success")][0]')
@@ -32,7 +33,7 @@ BRANCH_BENCHMARKS_URL="https://github.com/maximumstock/dns-thingy/suites/$BRANCH
 echo "Master Benchmark: $MASTER_BENCHMARKS_URL"
 echo "Branch Benchmark: $BRANCH_BENCHMARKS_URL"
 
-PR_NUMBER=$(gh api "/repos/maximumstock/dns-thingy/pulls?head=$BRANCH&per_page=1" | jq ".[0].number")
+PR_NUMBER=$(gh api "/repos/maximumstock/dns-thingy/pulls?head=$ORG_HEAD:$BRANCH&per_page=1" | jq '.[0].number')
 
 gh run download $MASTER_RUN_ID -n benchmark-results --dir master-benchmark-results
 gh run download $BRANCH_RUN_ID -n benchmark-results --dir branch-benchmark-results
