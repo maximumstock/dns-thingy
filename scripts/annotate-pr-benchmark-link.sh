@@ -7,16 +7,24 @@ BRANCH=$1
 # Get latest, successful run for master
 MASTER_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=master&status=completed" | jq '[.workflow_runs[]|select(.conclusion=="success")][0]')
 # Get latest run for $BRANCH as it most likely contains the latest, succesful benchmark job
+echo "BRANCH $BRANCH"
+echo "BRANCH RUN URI /repos/maximumstock/dns-thingy/actions/runs?branch=$BRANCH&status=completed"
 BRANCH_RUN=$(gh api "/repos/maximumstock/dns-thingy/actions/runs?branch=$BRANCH&status=completed" | jq '.workflow_runs[0]')
 
 MASTER_SUITE_ID=$(echo "$MASTER_RUN" | jq ".check_suite_id")
 BRANCH_SUITE_ID=$(echo "$BRANCH_RUN" | jq ".check_suite_id")
 
+echo "BRANCH SUITE ID $BRANCH_SUITE_ID"
+
 MASTER_RUN_ID=$(echo "$MASTER_RUN" | jq ".id")
 BRANCH_RUN_ID=$(echo "$BRANCH_RUN" | jq ".id")
 
+echo "BRANCH RUN ID $BRANCH_RUN_ID"
+
 MASTER_ARTIFACT_ID=$(gh api "/repos/maximumstock/dns-thingy/actions/runs/$MASTER_RUN_ID/artifacts" | jq ".artifacts[0].id")
 BRANCH_ARTIFACT_ID=$(gh api "/repos/maximumstock/dns-thingy/actions/runs/$BRANCH_RUN_ID/artifacts" | jq ".artifacts[0].id")
+
+echo "BRANCH ARTIFACT ID $BRANCH_ARTIFACT_ID"
 
 MASTER_BENCHMARKS_URL="https://github.com/maximumstock/dns-thingy/suites/$MASTER_SUITE_ID/artifacts/$MASTER_ARTIFACT_ID"
 BRANCH_BENCHMARKS_URL="https://github.com/maximumstock/dns-thingy/suites/$BRANCH_SUITE_ID/artifacts/$BRANCH_ARTIFACT_ID"
