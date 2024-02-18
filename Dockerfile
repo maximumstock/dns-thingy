@@ -7,4 +7,5 @@ RUN strip /app/target/release/dns-block-tokio
 FROM rust:1.74-slim-buster
 WORKDIR /app
 COPY --from=builder /app/target/release/dns-block-tokio /usr/local/bin/dns-block-tokio
+EXPOSE 53000/udp
 CMD ["dns-block-tokio"]

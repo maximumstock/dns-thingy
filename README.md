@@ -15,6 +15,16 @@ This workspace project consists of the following subcrates in `crates`:
 - `dns-block-threaded` - a multi-threaded version of `dns-block`
 - `dns-block-tokio` - an async version of `dns-block` based on Tokio (not fully async at this point, as it uses blocking parts of `dns`)
 
+## How to run
+
+You can either clone and `cargo install -p dns-block-tokio` and then run `dns-block-tokio`
+or use Docker (only `linux/amd64` images are being built by CI at the moment) by pulling the image
+`docker run -p 53000:53000 maximumstock2/dns-thingy:latest`
+which runs `dns-block-tokio` inside the container on port 53000 and makes it available on your host machine
+on port `53000` as well. Optionally, use `-p 53:53000` to map your local port `53` to be used, but that most likely requires root privileges.
+
+At that point `dns-thingy` can answer DNS queries, ie. `dig google.com @127.0.0.1 @53000`.
+
 ## TODO
 
 - [ ] feat: add custom blocking rules
