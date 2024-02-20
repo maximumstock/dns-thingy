@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 bytes = "1.5.0"
-serde = { version = "1.0.192", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
 tokio = { version = "1.32.0", features = ["full"] }
 
 [dev-dependencies]
