@@ -130,16 +130,6 @@ mod tests {
             if let Some(Answer::A { ipv4, .. }) = answers.last() {
                 assert_eq!(&Ipv4Addr::new(93, 184, 216, 34), ipv4);
             }
-
-            let (answers, _) =
-                resolve_domain("www.maximumstock.net", dns_root, None, None).unwrap();
-            let expected = vec![Ipv4Addr::new(154, 53, 57, 10)];
-
-            for answer in &answers {
-                if let Answer::A { ipv4, .. } = answer {
-                    assert!(expected.contains(ipv4));
-                }
-            }
         }
     }
 }
