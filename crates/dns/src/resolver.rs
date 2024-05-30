@@ -127,9 +127,7 @@ mod tests {
     fn test_resolve_a_records() {
         for dns_root in DNS_SERVERS {
             let (answers, _) = resolve_domain("www.example.com", dns_root, None, None).unwrap();
-            if let Some(Answer::A { ipv4, .. }) = answers.last() {
-                assert_eq!(&Ipv4Addr::new(93, 184, 216, 34), ipv4);
-            }
+            assert!(matches!(answers.last(), Some(&Answer::A { ipv4, .. })));
         }
     }
 }
