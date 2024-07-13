@@ -70,14 +70,13 @@ pub async fn resolve_domain_async(
     Ok((answers, response))
 }
 
-pub async fn resolve_domain_async_benchmark(
-    _domain: &str,
-    _dns: &str,
+pub async fn stub_response_with_delay(
     id: Option<u16>,
-    _existing_socket: Option<tokio::net::UdpSocket>,
+    delay: Duration,
 ) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_response(id.unwrap_or(1337), ResponseCode::NOERROR).unwrap();
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(delay).await;
+    // Still parse answers, to keep the same API as the actual resolve function
     let answers = DnsParser::new(&response).parse_answers()?;
     Ok((answers, response))
 }

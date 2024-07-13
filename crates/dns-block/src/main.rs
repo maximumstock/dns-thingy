@@ -2,7 +2,7 @@ use std::{net::UdpSocket, time::Duration};
 
 use dns::{
     dns::generate_response,
-    filter::apply_domain_filter,
+    filter::is_domain_blacklisted,
     resolver::{extract_query_id_and_domain, resolve_domain, resolve_domain_benchmark},
 };
 
@@ -32,7 +32,7 @@ fn main() {
         if let Ok((_, sender)) = incoming_socket.recv_from(&mut incoming_query) {
             let (request_id, question) = extract_query_id_and_domain(&incoming_query).unwrap();
 
-            if apply_domain_filter(&question.domain_name) {
+            if is_domain_blacklisted(&question.domain_name) {
                 println!("Blocking request for {:?}", question.domain_name);
                 let nx_response =
                     generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
