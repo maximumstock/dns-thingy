@@ -33,33 +33,40 @@ async fn main() {
     let query_recorder = setup_query_recorder(&server_args.recording_folder).await;
 
     // Potential Speed Improvements to tests:
-    // - start by setting up N tasks on startup instead of waiting for a packet to create a task
-    // - use a low-level socket API to configure socket settings (see Socket2)
-    // - create a separate socket instance per task
-    // - we don't need to parse the response DNS packet in the resolution function, as the parsing is only for displaying
+    // - [x] start by setting up N tasks on startup instead of waiting for a packet to create a task
+    // - [ ] use a low-level socket API to configure socket settings (see Socket2)
+    // - [ ] create a separate socket instance per task
+    // - [ ] we don't need to parse the response DNS packet in the resolution function, as the parsing is only for displaying
     //   the results to the user. We can remove the parsing and just return the raw response packet.
 
-    // But before that, we need to refactor the code to make it more testable
+    // - [ ] But before that, we need to refactor the code to make it more testable
     // by implementing different setup strategies on startup.
-    // Also, we need to add a resolution flag that bypasses the DNS resolution and
+    // - [x] Also, we need to add a resolution flag that bypasses the DNS resolution and
     // returns a canned response to speed up tests.
 
-    loop {
+    let mut handles = vec![];
+    for _ in 0..4 {
         let socket = Arc::clone(&socket);
         let server_args = Arc::clone(&server_args);
         let query_recorder = Arc::clone(&query_recorder);
 
-        let mut buf = [0; 512];
-        // Bottleneck #1: we only ever read new requests one at a time, even though we use async IO
-        let (_, sender) = socket.recv_from(&mut buf).await.unwrap();
+        let handle = tokio::spawn(async move {
+            loop {
+                let mut buf = [0; 512];
+                let (_, sender) = socket.recv_from(&mut buf).await.unwrap();
 
-        if let Some(ref f) = *query_recorder {
-            f.write().await.write_all(&buf).await.unwrap();
-        }
+                if let Some(ref f) = *query_recorder {
+                    f.write().await.write_all(&buf).await.unwrap();
+                }
 
-        tokio::spawn(async move {
-            process(&socket, &buf, sender, &server_args).await;
+                process(&socket, &buf, sender, &server_args).await;
+            }
         });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.await.unwrap();
     }
 }
 
