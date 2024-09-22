@@ -1,6 +1,5 @@
 use crate::dns::{
-    encode_domain_name, generate_response, Answer, DnsPacketBuffer, DnsParser, Question,
-    ResponseCode,
+    encode_domain_name, generate_response, Answer, DnsParser, Question, ResponseCode,
 };
 
 use std::{net::UdpSocket, time::Duration};
@@ -81,12 +80,11 @@ pub async fn stub_response_with_delay(
     Ok((answers, response))
 }
 
-pub fn extract_query_id_and_domain(
-    buf: DnsPacketBuffer,
-) -> Result<(u16, Question), Box<dyn std::error::Error>> {
+pub fn extract_dns_question(buf: &[u8]) -> Result<Question, Box<dyn std::error::Error>> {
     let mut parser = DnsParser::new(buf);
     let header = parser.parse_header();
-    Ok((header.id, parser.parse_question()))
+    let question = parser.parse_question(header.request_id);
+    Ok(question)
 }
 
 const DEFAULT_ID: (u8, u8) = ((1337u16 >> 4) as u8, (1337 & 0xFF) as u8);
@@ -116,8 +114,6 @@ pub(crate) fn generate_request(domain: &str, id: Option<u16>) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use std::net::Ipv4Addr;
-
     use super::{resolve_domain, Answer};
 
     const DNS_SERVERS: [&str; 1] = ["1.1.1.1:53"];
@@ -126,7 +122,7 @@ mod tests {
     fn test_resolve_a_records() {
         for dns_root in DNS_SERVERS {
             let (answers, _) = resolve_domain("www.example.com", dns_root, None, None).unwrap();
-            assert!(matches!(answers.last(), Some(&Answer::A { ipv4, .. })));
+            assert!(matches!(answers.last(), Some(&Answer::A { ipv4: _, .. })));
         }
     }
 }

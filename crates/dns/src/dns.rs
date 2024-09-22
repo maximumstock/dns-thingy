@@ -72,7 +72,7 @@ pub fn generate_response(
     };
 
     let header = Header {
-        id,
+        request_id: id,
         flags,
         ..Header::default()
     };
@@ -187,11 +187,12 @@ impl<'a> DnsParser<'a> {
         self.advance_n::<1>();
     }
 
-    pub fn parse_question(&mut self) -> Question {
+    pub fn parse_question(&mut self, request_id: u16) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
             r#type: self.advance_n::<2>().collate(),
             class: self.advance_n::<2>().collate(),
+            request_id,
         }
     }
 
@@ -251,7 +252,7 @@ impl<'a> DnsParser<'a> {
 
     pub fn parse_header(&mut self) -> Header {
         Header {
-            id: self.advance_n::<2>().collate() as u16,
+            request_id: self.advance_n::<2>().collate() as u16,
             flags: Flags::from(self.advance_n::<2>().collate() as u16),
             question_count: self.advance_n::<2>().collate() as u16,
             answer_count: self.advance_n::<2>().collate() as u16,
@@ -266,7 +267,7 @@ impl<'a> DnsParser<'a> {
         let header = self.parse_header();
 
         for _ in 0..header.question_count {
-            self.parse_question();
+            self.parse_question(header.request_id);
         }
 
         let answers = (0..header.answer_count)
@@ -336,7 +337,7 @@ impl From<usize> for RecordType {
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Header {
-    pub id: u16,
+    pub request_id: u16,
     pub flags: Flags,
     pub question_count: u16,
     pub answer_count: u16,
@@ -347,7 +348,7 @@ pub struct Header {
 impl From<Header> for [u8; 12] {
     fn from(header: Header) -> Self {
         let mut value = vec![];
-        value.extend_from_slice(&header.id.to_be_bytes());
+        value.extend_from_slice(&header.request_id.to_be_bytes());
         let raw_flags: u16 = header.flags.into();
         value.extend_from_slice(&raw_flags.to_be_bytes());
         value.extend_from_slice(&header.question_count.to_be_bytes());
@@ -363,6 +364,7 @@ pub struct Question {
     pub domain_name: String,
     pub r#type: usize,
     pub class: usize,
+    pub request_id: u16,
 }
 
 #[derive(Debug)]
@@ -393,7 +395,6 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-
     use crate::dns::{encode_domain_name, Collate, DnsParser, Flags, Header};
 
     #[test]
@@ -436,7 +437,7 @@ mod tests {
             flags: Flags::from(0x8100_u16),
             question_count: 1,
             answer_count: 1,
-            id: 1234,
+            request_id: 1234,
             ..Default::default()
         };
 

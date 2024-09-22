@@ -31,9 +31,8 @@ At that point `dns-thingy` can answer DNS queries, ie. `dig google.com @127.0.0.
 - [ ] feat: cache records according to answer TTL
 - [ ] feat: implement more record types
 - [ ] api: request builder for DNS queries & responses
-- [x] perf: optimise buffer allocation
-- [x] bench: don't actually send out queries during benchmarks to eliminate network & upstream performance from the benchmark
-- [x] fix: cant pipe through dns query as we need to recursively query upstream but downstream might not have set that flag
+- [ ] bench
+  - every commit on `master` should trigger a benchmark suite that collects the typical benchmark data, posts the data to the repository/GH Pages and builds a website with the results in a graph
 
 ## Performance Evaluation
 

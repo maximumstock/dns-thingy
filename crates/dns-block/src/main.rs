@@ -3,7 +3,7 @@ use std::{net::UdpSocket, time::Duration};
 use dns::{
     dns::generate_response,
     filter::is_domain_blacklisted,
-    resolver::{extract_query_id_and_domain, resolve_domain, resolve_domain_benchmark},
+    resolver::{extract_dns_question, resolve_domain, resolve_domain_benchmark},
 };
 
 const DEFAULT_UPSTREAM_DNS: &str = "1.1.1.1:53";
@@ -30,19 +30,20 @@ fn main() {
     loop {
         incoming_query.fill(0);
         if let Ok((_, sender)) = incoming_socket.recv_from(&mut incoming_query) {
-            let (request_id, question) = extract_query_id_and_domain(&incoming_query).unwrap();
+            let question = extract_dns_question(&incoming_query).unwrap();
 
             if is_domain_blacklisted(&question.domain_name) {
                 println!("Blocking request for {:?}", question.domain_name);
                 let nx_response =
-                    generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
+                    generate_response(question.request_id, dns::dns::ResponseCode::NXDOMAIN)
+                        .unwrap();
                 incoming_socket.send_to(&nx_response, sender).unwrap();
             } else {
                 if is_benchmark {
                     let (_, reply) = resolve_domain_benchmark(
                         &question.domain_name,
                         &upstream_dns_host,
-                        Some(request_id),
+                        Some(question.request_id),
                         Some(outcoming_socket.try_clone().unwrap()),
                     )
                     .unwrap();
@@ -53,7 +54,7 @@ fn main() {
                 match resolve_domain(
                     &question.domain_name,
                     &upstream_dns_host,
-                    Some(request_id),
+                    Some(question.request_id),
                     Some(outcoming_socket.try_clone().unwrap()),
                 ) {
                     Ok((_, reply)) => {
@@ -61,7 +62,7 @@ fn main() {
                     }
                     Err(e) => {
                         eprintln!("Error from upstream DNS {e:?}");
-                        generate_response(request_id, dns::dns::ResponseCode::SERVFAIL)
+                        generate_response(question.request_id, dns::dns::ResponseCode::SERVFAIL)
                             .map(|res| incoming_socket.send_to(&res, sender).unwrap())
                             .unwrap();
                     }

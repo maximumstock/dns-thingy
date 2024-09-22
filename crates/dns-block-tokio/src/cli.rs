@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 pub struct ServerArgs {
     /// DNS server to forward to
@@ -9,8 +9,12 @@ pub struct ServerArgs {
     pub dns_relay: String,
 
     /// Port to listen on
-    #[arg(short, long, default_value_t = 53000)]
-    pub port: u16,
+    #[arg(long, default_value_t = String::from("0.0.0.0"))]
+    pub bind_address: String,
+
+    /// Port to listen on
+    #[arg(long, default_value_t = 53000)]
+    pub bind_port: u16,
 
     /// Whether benchmark mode is enabled, ie. if forwarding should be skipped and to avoid network calls upstream
     #[arg(short, long, default_value_t = false)]

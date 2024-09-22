@@ -1,65 +1,59 @@
 mod cli;
+mod recording;
 
 use cli::ServerArgs;
-use std::{
-    net::SocketAddr,
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::{Duration, UNIX_EPOCH},
-};
-use tokio::{io::AsyncWriteExt, net::UdpSocket, sync::RwLock};
+use std::{sync::Arc, thread::available_parallelism, time::Duration};
+use tokio::net::UdpSocket;
 
 use dns::{
-    dns::generate_response,
+    dns::{generate_response, DnsPacketBuffer},
     filter::is_domain_blacklisted,
-    resolver::{extract_query_id_and_domain, resolve_domain_async, stub_response_with_delay},
+    resolver::{extract_dns_question, resolve_domain_async, stub_response_with_delay},
 };
 
 #[tokio::main]
 async fn main() {
-    let server_args = Arc::new(ServerArgs::from_env());
-
-    let socket = UdpSocket::bind(("0.0.0.0", server_args.port))
-        .await
-        .unwrap();
-    let socket = Arc::new(socket);
+    let server_args = ServerArgs::from_env();
 
     println!(
-        "Started DNS blocker on 127.0.0.1::{0} [benchmark={1}]",
-        server_args.port, server_args.benchmark,
+        "Started DNS blocker on {0}::{1} [benchmark={2}]",
+        server_args.bind_address, server_args.bind_port, server_args.benchmark,
     );
     println!("Options {server_args:#?}");
 
-    let query_recorder = setup_query_recorder(&server_args.recording_folder).await;
+    println!(
+        "Number of Cores: {0}",
+        available_parallelism().unwrap().get()
+    );
 
-    // Potential Speed Improvements to tests:
-    // - [x] start by setting up N tasks on startup instead of waiting for a packet to create a task
-    // - [ ] use a low-level socket API to configure socket settings (see Socket2)
-    // - [ ] create a separate socket instance per task
-    // - [ ] we don't need to parse the response DNS packet in the resolution function, as the parsing is only for displaying
-    //   the results to the user. We can remove the parsing and just return the raw response packet.
+    // A) Create a pool of tasks to handle incoming DNS requests
+    // start_server_without_task_delegation(server_args.clone()).await;
+    // B) One acceptor task that spawns further tasks for each incoming request
+    // start_server_with_acceptors(server_args.clone(), 1).await;
+    // C) Multiple acceptor tasks that spawn further tasks for each incoming request
+    start_server_with_acceptors(server_args, get_acceptor_pool_size()).await;
+}
 
-    // - [ ] But before that, we need to refactor the code to make it more testable
-    // by implementing different setup strategies on startup.
-    // - [x] Also, we need to add a resolution flag that bypasses the DNS resolution and
-    // returns a canned response to speed up tests.
+#[allow(unused)]
+async fn start_server_without_task_delegation(server_args: ServerArgs) {
+    let server_args = Arc::new(server_args);
+    let socket = Arc::new(
+        tokio::net::UdpSocket::bind((server_args.bind_address.clone(), server_args.bind_port))
+            .await
+            .unwrap(),
+    );
 
     let mut handles = vec![];
-    for _ in 0..4 {
-        let socket = Arc::clone(&socket);
+    for _ in 0..get_acceptor_pool_size() {
         let server_args = Arc::clone(&server_args);
-        let query_recorder = Arc::clone(&query_recorder);
 
+        let socket = Arc::clone(&socket);
         let handle = tokio::spawn(async move {
             loop {
-                let mut buf = [0; 512];
-                let (_, sender) = socket.recv_from(&mut buf).await.unwrap();
+                let mut buffer = [0u8; 512];
+                let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
 
-                if let Some(ref f) = *query_recorder {
-                    f.write().await.write_all(&buf).await.unwrap();
-                }
-
-                process(&socket, &buf, sender, &server_args).await;
+                process(&socket, &buffer, &sender, &server_args).await;
             }
         });
         handles.push(handle);
@@ -70,36 +64,73 @@ async fn main() {
     }
 }
 
+async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks: u8) {
+    let server_args = Arc::new(server_args);
+    let socket = Arc::new(
+        tokio::net::UdpSocket::bind((server_args.bind_address.clone(), server_args.bind_port))
+            .await
+            .unwrap(),
+    );
+
+    let mut handles = vec![];
+    for _ in 0..num_acceptor_tasks {
+        let server_args = Arc::clone(&server_args);
+        let socket = Arc::clone(&socket);
+        let handle = tokio::spawn(async move {
+            loop {
+                let server_args = Arc::clone(&server_args);
+                let socket = Arc::clone(&socket);
+                let mut buffer = [0u8; 512];
+                let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
+
+                tokio::spawn(async move {
+                    loop {
+                        process(&socket, &buffer, &sender, &server_args).await;
+                    }
+                });
+            }
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.await.unwrap();
+    }
+}
+
+fn get_acceptor_pool_size() -> u8 {
+    available_parallelism().unwrap().get() as u8
+}
+
 async fn process(
-    socket: &tokio::net::UdpSocket,
-    buf: &[u8; 512],
-    sender: SocketAddr,
+    socket: &UdpSocket,
+    buf: DnsPacketBuffer<'_>,
+    sender: &std::net::SocketAddr,
     server_args: &ServerArgs,
 ) {
     let start = std::time::SystemTime::now();
-    let (request_id, question) = extract_query_id_and_domain(buf).unwrap();
+    let question = extract_dns_question(buf).unwrap();
 
     if server_args.benchmark {
-        handle_benchmark(request_id, socket, sender).await;
+        handle_benchmark(question.request_id, socket, sender).await;
     } else if is_domain_blacklisted(&question.domain_name) {
-        handle_filter(server_args, &question, request_id, socket, sender).await;
+        handle_filter(server_args, &question, socket, sender).await
     } else {
-        handle_resolution(question, server_args, request_id, socket, sender, start).await;
+        handle_resolution(question, server_args, socket, sender, start).await
     }
 }
 
 async fn handle_resolution(
     question: dns::dns::Question,
     server_args: &ServerArgs,
-    request_id: u16,
-    socket: &UdpSocket,
-    sender: SocketAddr,
+    socket: &tokio::net::UdpSocket,
+    sender: &std::net::SocketAddr,
     start: std::time::SystemTime,
 ) {
     match resolve_domain_async(
         &question.domain_name,
         &server_args.dns_relay,
-        Some(request_id),
+        Some(question.request_id),
         None,
     )
     .await
@@ -126,52 +157,26 @@ async fn handle_resolution(
 async fn handle_filter(
     server_args: &ServerArgs,
     question: &dns::dns::Question,
-    request_id: u16,
-    socket: &UdpSocket,
-    sender: SocketAddr,
+    socket: &tokio::net::UdpSocket,
+    sender: &std::net::SocketAddr,
 ) {
     if !server_args.quiet {
         println!("Blocking request for {:?}", question.domain_name);
     }
-    let nx_response = generate_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
+    let nx_response =
+        generate_response(question.request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
     socket.send_to(&nx_response, sender).await.unwrap();
 }
 
-async fn handle_benchmark(request_id: u16, socket: &UdpSocket, sender: SocketAddr) {
+async fn handle_benchmark(
+    request_id: u16,
+    socket: &tokio::net::UdpSocket,
+    sender: &std::net::SocketAddr,
+) {
     // If we are benchmarking, we don't need to resolve the domain and instead send a canned response
     let benchmark_resolution_delay = Duration::from_millis(5);
     let (_, reply) = stub_response_with_delay(Some(request_id), benchmark_resolution_delay)
         .await
         .unwrap();
     socket.send_to(&reply, sender).await.unwrap();
-}
-
-async fn setup_query_recorder(
-    record_query_path: &Option<String>,
-) -> Arc<Option<RwLock<tokio::fs::File>>> {
-    // TODO: avoid locks; write buffers to a dedicated tokio task via channels
-    // which writes out the data
-    if let Some(path) = record_query_path {
-        tokio::fs::create_dir_all(Path::new(path)).await.unwrap();
-        println!("Recording queries to {path}");
-    }
-
-    Arc::new({
-        if let Some(ref path) = record_query_path {
-            let filename = format!(
-                "{}.bin",
-                std::time::SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs()
-            );
-            Some(RwLock::new(
-                tokio::fs::File::create(PathBuf::new().join(path).join(filename))
-                    .await
-                    .unwrap(),
-            ))
-        } else {
-            None
-        }
-    })
 }

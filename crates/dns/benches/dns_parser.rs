@@ -18,7 +18,7 @@ fn dns_parser(c: &mut Criterion) {
     c.bench_function("questions parsing", |b| {
         b.iter(|| {
             for p in dns_queries.iter() {
-                DnsParser::new(black_box(p)).parse_question();
+                DnsParser::new(black_box(p)).parse_question(1337);
             }
         });
     });
