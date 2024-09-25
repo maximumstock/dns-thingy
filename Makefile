@@ -12,3 +12,17 @@ test:
 	cargo test --all-features --all-targets -- --nocapture
 dev:
 	cargo watch -w crates -x "run --bin dns-block-tokio"
+deploy-nixpi:
+	# Based on https://sebi.io/posts/2024-05-02-guide-cross-compiling-rust-from-macos-to-raspberry-pi-2024-apple-silicon/
+	cargo build --release -p dns-block-tokio --target=armv7-unknown-linux-musleabihf
+	rsync ./target/armv7-unknown-linux-musleabihf/release/dns-block-tokio nixpi:/root/.cargo/bin/dns-block-tokio
+	ssh nixpi "systemctl restart dns-thingy"
+logs-nixpi:
+	ssh nixpi "journalctl -u dns-thingy -f"
+deploy-fishtank:
+	# Based on https://betterprogramming.pub/cross-compiling-rust-from-mac-to-linux-7fad5a454ab1
+	cargo build --release -p dns-block-tokio --target=x86_64-unknown-linux-musl
+	rsync ./target/x86_64-unknown-linux-musl/release/dns-block-tokio fishtank:/root/.cargo/bin/dns-block-tokio
+	ssh fishtank "systemctl restart dns-thingy"
+logs-fishtank:
+	ssh fishtank "journalctl -u dns-thingy -f"
