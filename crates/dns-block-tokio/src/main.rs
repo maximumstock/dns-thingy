@@ -76,17 +76,17 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
     for _ in 0..num_acceptor_tasks {
         let server_args = Arc::clone(&server_args);
         let socket = Arc::clone(&socket);
+
         let handle = tokio::spawn(async move {
             loop {
                 let server_args = Arc::clone(&server_args);
                 let socket = Arc::clone(&socket);
+
                 let mut buffer = [0u8; 512];
                 let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
 
                 tokio::spawn(async move {
-                    loop {
-                        process(&socket, &buffer, &sender, &server_args).await;
-                    }
+                    process(&socket, &buffer, &sender, &server_args).await;
                 });
             }
         });
