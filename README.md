@@ -27,6 +27,8 @@ At that point `dns-thingy` can answer DNS queries, ie. `dig google.com @127.0.0.
 
 ## TODO
 
+- [ ] docs: model request flow and make sure we actually do the least amount of work
+- [ ] optional caching
 - [ ] feat: add custom blocking rules
 - [ ] feat: cache records according to answer TTL
 - [ ] feat: implement more record types
@@ -44,3 +46,40 @@ feeling for performance characteristics of different implementation strategies, 
 3. Asynchronous based on Tokio
 
 See [Benchmarks](benchmarks/README.md) for further information.
+
+## Request Flow
+
+Syntax: https://mermaid.js.org/syntax/sequenceDiagram.html
+
+```mermaid
+sequenceDiagram
+    participant user as User
+    participant forwarder as dns-thingy
+    participant relay as DNS Relay
+
+    %% flow with filtering
+    par flow with filtering
+      user->>forwarder: dig A google.com
+      activate forwarder
+      forwarder->>forwarder: parse question, filter triggers
+      forwarder->>forwarder: create NXDOMAIN answer with user's question ID
+      forwarder->>user: return answer
+      deactivate forwarder
+    end
+
+    %% flow without filtering
+    par flow without filtering
+      user->>forwarder: dig A google.de
+      activate forwarder
+      forwarder->>forwarder: parse question, filter does not trigger
+      forwarder->>relay: forward original DNS question
+      deactivate forwarder
+      activate relay
+      relay->>forwarder: DNS answer
+      deactivate relay
+      activate forwarder
+      forwarder->>forwarder: parse answer, caching based on TTL
+      forwarder->>user: return original DNS answer
+      deactivate forwarder
+    end
+```
