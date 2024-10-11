@@ -83,3 +83,11 @@ sequenceDiagram
       deactivate forwarder
     end
 ```
+
+## References
+
+Some reading material that was helpful:
+
+- https://datatracker.ietf.org/doc/html/rfc1035
+- https://github.com/EmilHernvall/dnsguide/blob/master/chapter1.md
+- https://blog.cloudflare.com/how-to-stop-running-out-of-ephemeral-ports-and-start-to-love-long-lived-connections/
