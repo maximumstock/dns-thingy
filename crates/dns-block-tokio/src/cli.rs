@@ -20,6 +20,10 @@ pub struct ServerArgs {
     #[arg(short, long, default_value_t = false)]
     pub benchmark: bool,
 
+    /// Milliseconds of resolution delay of DNS queries when `benchmarking = true`
+    #[arg(long, default_value_t = 500)]
+    pub resolution_delay_ms: u64,
+
     /// Folder path to save DNS query recordings to
     #[arg(short, long)]
     pub recording_folder: Option<String>,
