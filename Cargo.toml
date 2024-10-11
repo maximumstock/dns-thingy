@@ -1,9 +1,3 @@
 [workspace]
 
-members = [
-    "crates/dns",
-    "crates/dns-client",
-    "crates/dns-block",
-    "crates/dns-block-threaded",
-    "crates/dns-block-tokio",
-]
+members = ["crates/dns", "crates/dns-client", "crates/dns-block-tokio"]
