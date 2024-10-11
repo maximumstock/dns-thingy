@@ -43,20 +43,18 @@ async fn start_server_without_task_delegation(server_args: ServerArgs) {
             .await
             .unwrap(),
     );
-    let sender_socket = Arc::new(tokio::net::UdpSocket::bind("0.0.0.0").await.unwrap());
 
     let mut handles = vec![];
     for _ in 0..get_acceptor_pool_size() {
         let server_args = Arc::clone(&server_args);
-
         let socket = Arc::clone(&socket);
-        let sender_socket = Arc::clone(&sender_socket);
+
         let handle = tokio::spawn(async move {
             loop {
                 let mut buffer = [0u8; 512];
                 let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
 
-                process(&socket, &sender_socket, &buffer, &sender, &server_args).await;
+                process(&socket, &buffer, &sender, &server_args).await;
             }
         });
         handles.push(handle);
@@ -74,25 +72,22 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
             .await
             .unwrap(),
     );
-    let sender_socket = Arc::new(tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap());
 
     let mut handles = vec![];
     for _ in 0..num_acceptor_tasks {
         let server_args = Arc::clone(&server_args);
         let socket = Arc::clone(&socket);
-        let sender_socket = Arc::clone(&sender_socket);
 
         let handle = tokio::spawn(async move {
             loop {
                 let server_args = Arc::clone(&server_args);
                 let socket = Arc::clone(&socket);
-                let sender_socket = Arc::clone(&sender_socket);
 
                 let mut buffer = [0u8; 512];
                 let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
 
                 tokio::spawn(async move {
-                    process(&socket, &sender_socket, &buffer, &sender, &server_args).await;
+                    process(&socket, &buffer, &sender, &server_args).await;
                 });
             }
         });
@@ -110,7 +105,6 @@ fn get_acceptor_pool_size() -> u8 {
 
 async fn process(
     receiving_socket: &UdpSocket,
-    upstream_socket: &UdpSocket,
     original_query: &DnsPacketBuffer,
     sender: &std::net::SocketAddr,
     server_args: &ServerArgs,
@@ -130,14 +124,6 @@ async fn process(
     } else if is_domain_blacklisted(&question.domain_name) {
         handle_filter(server_args, &question, request_id, receiving_socket, sender).await;
     } else {
-        handle_resolution(
-            original_query,
-            server_args,
-            receiving_socket,
-            upstream_socket,
-            sender,
-            start,
-        )
-        .await;
+        handle_resolution(original_query, server_args, receiving_socket, sender, start).await;
     }
 }

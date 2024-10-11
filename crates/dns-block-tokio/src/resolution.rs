@@ -6,16 +6,15 @@ use dns::{
 
 use crate::cli::ServerArgs;
 
-/// TODO: should have a sender socket so we don't re-bind on each upstream send in `resolve_domain_async`
 pub async fn handle_resolution(
     query: &DnsPacketBuffer,
     server_args: &ServerArgs,
     receiving_socket: &tokio::net::UdpSocket,
-    upstream_socket: &tokio::net::UdpSocket,
     sender: &std::net::SocketAddr,
     start: std::time::SystemTime,
 ) {
-    match relay_query_async(query, &server_args.dns_relay, upstream_socket).await {
+    let upstream_socket = tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap();
+    match relay_query_async(query, &server_args.dns_relay, &upstream_socket).await {
         Ok(reply) => {
             receiving_socket.send_to(&reply, sender).await.unwrap();
             if !server_args.quiet {
