@@ -8,8 +8,8 @@ use std::{sync::Arc, thread::available_parallelism};
 use tokio::net::UdpSocket;
 
 use dns::{
-    dns::{DnsPacketBuffer, DnsParser},
     filter::is_domain_blacklisted,
+    parse::parser::{DnsPacketBuffer, DnsParser},
 };
 
 #[tokio::main]
@@ -74,7 +74,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
             .await
             .unwrap(),
     );
-    let sender_socket = Arc::new(tokio::net::UdpSocket::bind(("127.0.0.1", 0)).await.unwrap());
+    let sender_socket = Arc::new(tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap());
 
     let mut handles = vec![];
     for _ in 0..num_acceptor_tasks {

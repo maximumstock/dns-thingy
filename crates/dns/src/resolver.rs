@@ -1,6 +1,9 @@
 use std::{net::UdpSocket, time::Duration};
 
-use crate::dns::{encode_domain_name, generate_nx_response, Answer, DnsParser, ResponseCode};
+use crate::{
+    parse::parser::{encode_domain_name, DnsParser},
+    protocol::{answer::Answer, utils::generate_nx_response},
+};
 
 /// Synchronously resolves INternet A records for `domain` using the DNS server `dns`
 pub fn resolve_domain(
@@ -57,7 +60,7 @@ pub async fn relay_query_async(
     upstream_dns: &str,
     socket: &tokio::net::UdpSocket,
 ) -> Result<[u8; 512], Box<dyn std::error::Error + Send + Sync>> {
-    if let Err(e) = socket.send_to(original_query, upstream_dns).await {
+    if let Err(e) = socket.send_to(original_query, "8.8.8.8:53").await {
         println!("Failed to send request to {upstream_dns:?}: {e:?}");
         return Err(e.into());
     }
@@ -75,17 +78,16 @@ pub async fn stub_response_with_delay(
     id: Option<u16>,
     delay: Duration,
 ) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
-    let response = generate_nx_response(id.unwrap_or(1337), ResponseCode::NXDOMAIN).unwrap();
+    let response = generate_nx_response(id.unwrap_or(1337)).unwrap();
     tokio::time::sleep(delay).await;
     // Still parse answers, to keep the same API as the actual resolve function
     let answers = DnsParser::new(&response).parse_answers()?;
     Ok((answers, response))
 }
 
-const DEFAULT_ID: [u8; 2] = [(1337u16 >> 4) as u8, (1337 & 0xFF) as u8];
-
 /// Generates a recursive DNS query for INternet A records
 pub(crate) fn generate_request(domain: &str, id: Option<u16>) -> Vec<u8> {
+    const DEFAULT_ID: [u8; 2] = [(1337u16 >> 4) as u8, (1337 & 0xFF) as u8];
     let id = id
         .map(|n| [(n >> 8) as u8, (n & 0xFF) as u8])
         .unwrap_or(DEFAULT_ID);

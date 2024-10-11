@@ -1,5 +1,6 @@
 use dns::{
-    dns::{generate_nx_response, DnsParser},
+    parse::parser::{DnsPacketBuffer, DnsParser},
+    protocol::{question::Question, utils::generate_nx_response},
     resolver::{relay_query_async, stub_response_with_delay},
 };
 
@@ -7,7 +8,7 @@ use crate::cli::ServerArgs;
 
 /// TODO: should have a sender socket so we don't re-bind on each upstream send in `resolve_domain_async`
 pub async fn handle_resolution(
-    query: &[u8; 512],
+    query: &DnsPacketBuffer,
     server_args: &ServerArgs,
     receiving_socket: &tokio::net::UdpSocket,
     upstream_socket: &tokio::net::UdpSocket,
@@ -39,7 +40,7 @@ pub async fn handle_resolution(
 
 pub async fn handle_filter(
     server_args: &ServerArgs,
-    question: &dns::dns::Question,
+    question: &Question,
     request_id: u16,
     socket: &tokio::net::UdpSocket,
     sender: &std::net::SocketAddr,
@@ -47,7 +48,7 @@ pub async fn handle_filter(
     if !server_args.quiet {
         println!("Blocking request for {:?}", question.domain_name);
     }
-    let nx_response = generate_nx_response(request_id, dns::dns::ResponseCode::NXDOMAIN).unwrap();
+    let nx_response = generate_nx_response(request_id).unwrap();
     socket.send_to(&nx_response, sender).await.unwrap();
 }
 
