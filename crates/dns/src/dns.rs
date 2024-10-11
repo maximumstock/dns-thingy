@@ -219,18 +219,6 @@ impl<'a> DnsParser<'a> {
         }
     }
 
-    pub fn parse_questions(
-        mut self,
-    ) -> Result<Vec<Question>, Box<dyn std::error::Error + Send + Sync>> {
-        let header = self.parse_header();
-
-        let questions = (0..header.question_count)
-            .map(|_| self.parse_question())
-            .collect();
-
-        Ok(questions)
-    }
-
     pub fn parse_answer(&mut self) -> Answer {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
@@ -285,7 +273,7 @@ impl<'a> DnsParser<'a> {
         }
     }
 
-    pub fn parse_header(&mut self) -> Header {
+    fn parse_header(&mut self) -> Header {
         Header {
             request_id: self.advance_n::<2>().collate() as u16,
             flags: Flags::from(self.advance_n::<2>().collate() as u16),
@@ -312,18 +300,14 @@ impl<'a> DnsParser<'a> {
         Ok(answers)
     }
 
-    pub fn get_first_question(
+    /// TODO: have this on the final Packet type that we fully parse from the buffer
+    pub fn get_relay_information(
         &mut self,
-    ) -> Result<Question, Box<dyn std::error::Error + Send + Sync>> {
-        self.position = 0;
-        self.parse_header();
-        Ok(self.parse_question())
-    }
-
-    pub fn get_request_id(&mut self) -> Result<u16, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(u16, Question), Box<dyn std::error::Error + Send + Sync>> {
         self.position = 0;
         let headers = self.parse_header();
-        Ok(headers.request_id)
+        let first_question = self.parse_question();
+        Ok((headers.request_id, first_question))
     }
 }
 

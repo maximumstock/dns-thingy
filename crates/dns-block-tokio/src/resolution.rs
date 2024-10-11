@@ -20,7 +20,7 @@ pub async fn handle_resolution(
             if !server_args.quiet {
                 // We only pick the first question, since multiple questions seem to be unsupported by most
                 // nameservers anyways, see https://stackoverflow.com/questions/4082081/requesting-a-and-aaaa-records-in-single-dns-query/4083071#4083071.
-                let question = DnsParser::new(query).get_first_question().unwrap();
+                let (_, question) = DnsParser::new(query).get_relay_information().unwrap();
                 println!(
                     "Handled query for {} [{}ms]",
                     &question.domain_name,

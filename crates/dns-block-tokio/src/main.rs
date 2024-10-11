@@ -117,8 +117,7 @@ async fn process(
 ) {
     let start = std::time::SystemTime::now();
     let mut parser = DnsParser::new(original_query);
-    let question = parser.get_first_question().unwrap();
-    let request_id = parser.get_request_id().unwrap();
+    let (request_id, question) = parser.get_relay_information().unwrap();
 
     if server_args.benchmark {
         handle_benchmark(
