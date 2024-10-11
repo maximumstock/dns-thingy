@@ -1,7 +1,7 @@
 build-release:
 	cargo build --release
 benchmark:
-	dnspyre -s "127.0.0.1:53000" -n 10 -c 8 -t A --recurse --no-color https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/2-domains
+	dnspyre -s "127.0.0.1:53000" -c 4 -t A --recurse --no-color https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains
 benchmark-all: build-release
 	./benchmarks/run.sh
 tidy:
