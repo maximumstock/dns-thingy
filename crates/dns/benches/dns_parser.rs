@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dns::dns::DnsParser;
+use dns::parse::parser::DnsParser;
 
 fn dns_parser(c: &mut Criterion) {
     let dns_queries: Vec<_> = (include_bytes!("./inputs/1000.bin").chunks(512))
@@ -11,18 +11,10 @@ fn dns_parser(c: &mut Criterion) {
         })
         .collect();
 
-    c.bench_function("answers parsing", |b| {
+    c.bench_function("parse full packet", |b| {
         b.iter(|| {
             for p in dns_queries.iter() {
                 DnsParser::new(black_box(p)).parse_answers().unwrap();
-            }
-        });
-    });
-
-    c.bench_function("questions parsing", |b| {
-        b.iter(|| {
-            for p in dns_queries.iter() {
-                DnsParser::new(black_box(p));
             }
         });
     });

@@ -220,7 +220,10 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::dns::{encode_domain_name, Collate, DnsParser, Flags, Header};
+    use crate::{
+        parse::parser::{encode_domain_name, Collate, DnsParser},
+        protocol::header::{Flags, Header},
+    };
 
     #[test]
     fn test_parser_advance() {
