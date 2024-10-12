@@ -9,7 +9,7 @@ It depends solely on [dnspyre](https://github.com/Tantalor93/dnspyre).
 
 ## Benchmark Results
 
-For each implementation (`basic`, `threaded-4`, `tokio`), the benchmark collects the following artefacts:
+For each implementation the benchmark collects the following artefacts:
 
 - DNS query response times histograms in `raw.csv`
 - the `stdout` stream from the benchmarking tool `dnspyre`
