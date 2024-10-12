@@ -1,3 +1,5 @@
+use dns::protocol::answer::Answer;
+
 fn main() {
     let mut args = std::env::args();
     args.next();
@@ -11,8 +13,8 @@ fn main() {
 
     for answer in answers {
         match answer {
-            dns::dns::Answer::A { meta, ipv4 } => println!("A\t{meta:?} - {ipv4}"),
-            dns::dns::Answer::CNAME { meta, cname } => println!("CNAME\t{meta:?} - {cname}"),
+            Answer::A { meta, ipv4 } => println!("A\t{meta:?} - {ipv4}"),
+            Answer::CNAME { meta, cname } => println!("CNAME\t{meta:?} - {cname}"),
         }
     }
 }
