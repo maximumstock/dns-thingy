@@ -1,6 +1,10 @@
 build-release:
 	cargo build --release
-benchmark:
+benchmark-fishtank:
+	dnspyre -s "192.168.178.113:53" -c 4 -t A --recurse --no-color https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains
+benchmark-nixpi:
+	dnspyre -s "192.168.178.121:53" -c 4 -t A --recurse --no-color https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains
+benchmark-local:
 	dnspyre -s "127.0.0.1:53000" -c 4 -t A --recurse --no-color https://raw.githubusercontent.com/Tantalor93/dnspyre/master/data/1000-domains
 benchmark-all: build-release
 	./benchmarks/run.sh
