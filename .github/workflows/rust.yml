@@ -143,8 +143,8 @@ jobs:
       - name: Upload Results
         uses: actions/upload-artifact@v3
         with:
-          name: benchmark-results
-          path: benchmarks
+          name: benchmarks-results
+          path: benchmarks/results
 
   benchmark-annotate-pr:
     permissions:
