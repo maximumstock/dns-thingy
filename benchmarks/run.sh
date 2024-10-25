@@ -20,6 +20,7 @@ echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53000" -n 1 -c 3 -t A \
     --recurse \
     --csv benchmarksraw.csv \
     --plot benchmarks \
+    --no-color \
     > benchmarks/stdout
 
 echo "Killing servers..."
