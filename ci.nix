@@ -12,7 +12,6 @@ pkgs.mkShell rec {
     })
     dnspyre
     perf-tools # to create profiles and flamegraph diffs
-    cargo-flamegraph # to generate flamegraphs from our Rust binaries
   ];
 
   RUST_BACKTRACE = 1;

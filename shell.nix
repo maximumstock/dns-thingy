@@ -26,7 +26,6 @@ pkgs.mkShell rec {
     cargo-feature
     cargo-udeps
     cargo-bloat
-    cargo-flamegraph
 
     # DNS Benchmarking
     dnspyre
