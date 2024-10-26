@@ -39,19 +39,19 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Compile
-        run: nix-shell ci.nix --command "cargo test --no-run --locked"
+        run: nix develop .#ci --command bash -c "cargo test --no-run --locked"
 
       - name: Test
-        run: nix-shell ci.nix --command "cargo test -- --nocapture --quiet"
+        run: nix develop .#ci --command bash -c "cargo test -- --nocapture --quiet"
 
       - name: Format
-        run: nix-shell ci.nix --command "cargo fmt --all -- --check"
+        run: nix develop .#ci --command bash -c "cargo fmt --all -- --check"
 
       - name: Lint
-        run: nix-shell ci.nix --command "cargo clippy -- -D warnings"
+        run: nix develop .#ci --command bash -c "cargo clippy -- -D warnings"
 
       - name: Build Release
-        run: nix-shell ci.nix --command "cargo build --release"
+        run: nix develop .#ci --command bash -c "cargo build --release"
 
       - name: Package Release Artifact
         run: |
