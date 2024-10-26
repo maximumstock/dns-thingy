@@ -38,7 +38,7 @@ if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     git clone --depth 1 http://github.com/brendangregg/FlameGraph
     cd FlameGraph
 
-    perf script | ./stackcollapse-perf.pl > out.perf-folded
+    perf script -i ../$OUTPUT_PATH/perf.data | ./stackcollapse-perf.pl > out.perf-folded
     cat out.perf-folded | ./flamegraph.pl > perf-kernel.svg
 
     mv out.perf-folded ../$OUTPUT_PATH/out.perf-folded
