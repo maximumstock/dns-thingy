@@ -35,10 +35,13 @@ pkill -SIGTERM dns-block-tokio || true
 
 git clone --depth 1 http://github.com/brendangregg/FlameGraph
 cd FlameGraph
-./stackcollapse-perf.pl ../perf.data > out.folded1
-./difffolded.pl out.folded1 ./flamegraph.pl > diff2.svg
-mv out.folded1 ..
-mv diff2.svg ..
+
+perf script | ./stackcollapse-perf.pl > out.perf-folded
+cat out.perf-folded | ./flamegraph.pl > perf-kernel.svg
+
+mv out.perf-folded ../$OUTPUT_PATH/out.perf-folded
+mv perf-kernel.svg ../$OUTPUT_PATH/perf-kernel.svg
+
 # ./stackcollapse-perf.pl ../out.stacks1 > out.folded1
 # ./stackcollapse-perf.pl ../out.stacks2 > out.folded2
 # ./difffolded.pl out.folded1 out.folded2 | ./flamegraph.pl > diff2.svg
