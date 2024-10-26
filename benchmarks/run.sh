@@ -11,14 +11,14 @@ OUTPUT_PATH="benchmarks/results"
 mkdir -p $OUTPUT_PATH
 
 echo "Starting dns-block-tokio"
-dns-block-tokio --benchmark --resolution-delay-ms 10 --bind-port 53000 --quiet &
+dns-block-tokio --benchmark --resolution-delay-ms 100 --bind-port 53000 --quiet &
 
 sleep 3
 
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     echo "Starting perf recording"
     sudo sysctl -w kernel.perf_event_paranoid=1
-    perf record -F99 -a --call-graph dwarf -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
+    perf record -F99 -a -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
 fi
 
 echo "Starting dns-block-tokio benchmark"
