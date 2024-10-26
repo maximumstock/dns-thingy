@@ -31,7 +31,7 @@ echo $DOMAINS_100 | xargs dnspyre -s "127.0.0.1:53000" -n 1 -c 3 -t A \
 
 echo "Killing servers..."
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    pkill -SIGTERM perf || true
+    sudo pkill -SIGTERM perf || true
 
     sleep 5 # give perf time to write the output file
     sudo chmod 755 $OUTPUT_PATH/perf.data
