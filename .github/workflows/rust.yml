@@ -165,7 +165,7 @@ jobs:
           # Mention in the commit comment
           alert-comment-cc-users: "@maximumstock"
           # Push and deploy GitHub pages branch automatically
-          auto-push: true
+          # auto-push: true
 
       - name: Upload Results
         uses: actions/upload-artifact@v3
