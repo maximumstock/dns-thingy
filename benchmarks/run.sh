@@ -18,7 +18,7 @@ sleep 3
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     echo "Starting perf recording"
     sudo sysctl -w kernel.perf_event_paranoid=1
-    perf record -F99 -a -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
+    sudo perf record -F99 -a -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
 fi
 
 echo "Starting dns-block-tokio benchmark"
@@ -38,8 +38,8 @@ if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     git clone --depth 1 http://github.com/brendangregg/FlameGraph
     cd FlameGraph
 
-    perf script -i ../$OUTPUT_PATH/perf.data | ./stackcollapse-perf.pl > out.perf-folded
-    cat out.perf-folded | ./flamegraph.pl > perf-kernel.svg
+    perf script -i ../$OUTPUT_PATH/perf.data | ./stackcollapse-perf.pl > out.perf-folded || true
+    cat out.perf-folded | ./flamegraph.pl > perf-kernel.svg || true
 
     mv out.perf-folded ../$OUTPUT_PATH/out.perf-folded
     mv perf-kernel.svg ../$OUTPUT_PATH/perf-kernel.svg
