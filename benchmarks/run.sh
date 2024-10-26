@@ -18,7 +18,7 @@ sleep 3
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     echo "Starting perf recording"
     sudo sysctl -w kernel.perf_event_paranoid=1
-    sudo perf record -F99 -ag -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
+    sudo perf record -F999 -g --call-graph dwarf -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
     # sudo perf record -F99 -a -p $(pgrep dns-block-tokio) -o $OUTPUT_PATH/perf.data &
 fi
 
