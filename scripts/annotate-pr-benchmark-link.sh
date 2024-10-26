@@ -38,8 +38,8 @@ PR_NUMBER=$(gh api "/repos/maximumstock/dns-thingy/pulls?head=$ORG_HEAD:$BRANCH&
 gh run download $MASTER_RUN_ID -n benchmark-results --dir master-benchmark-results
 gh run download $BRANCH_RUN_ID -n benchmark-results --dir branch-benchmark-results
 
-MASTER_TOKIO_STDOUT=$(cat master-benchmark-results/tokio/stdout)
-BRANCH_TOKIO_STDOUT=$(cat branch-benchmark-results/tokio/stdout)
+MASTER_TOKIO_STDOUT=$(cat master-benchmark-results/stdout)
+BRANCH_TOKIO_STDOUT=$(cat branch-benchmark-results/stdout)
 
 gh pr comment $PR_NUMBER --body "
   - Master Benchmark: $MASTER_BENCHMARKS_URL

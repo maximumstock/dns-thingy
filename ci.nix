@@ -11,6 +11,7 @@ pkgs.mkShell rec {
       extensions = [ "rust-src" "clippy" ];
     })
     dnspyre
+    perf-tools # to create profiles and flamegraph diffs
   ];
 
   RUST_BACKTRACE = 1;
