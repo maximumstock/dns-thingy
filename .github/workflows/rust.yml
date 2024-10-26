@@ -140,38 +140,40 @@ jobs:
           chmod +x releases/dns-block*
           nix-shell ci.nix --command "./benchmarks/run.sh"
 
-      - name: Download previous benchmark data
-        uses: actions/cache@v4
-        with:
-          path: ./cache
-          key: ${{ runner.os }}-benchmark
+      # TODO: Run perf profile'd cargo benchmarks
 
-      - name: Run Criterion benchmark
-        run: cargo bench | tee cargo-bench.txt
+      # - name: Download previous benchmark data
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ./cache
+      #     key: ${{ runner.os }}-benchmark
 
-      - name: Store Criterion benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          tool: "cargo"
-          output-file-path: cargo-bench.txt
-          # Where the previous data file is stored
-          external-data-json-path: ./cache/benchmark-data.json
-          # GitHub API token to make a commit comment
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Enable alert commit comment
-          comment-on-alert: true
-          # Always comment on PRs
-          summary-always: true
-          # Mention in the commit comment
-          alert-comment-cc-users: "@maximumstock"
-          # Push and deploy GitHub pages branch automatically
-          # auto-push: true
+      # - name: Run Criterion benchmark
+      #   run: cargo bench | tee cargo-bench.txt
 
-      - name: Upload Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: benchmarks-results
-          path: benchmarks/results
+      # - name: Store Criterion benchmark result
+      #   uses: benchmark-action/github-action-benchmark@v1
+      #   with:
+      #     tool: "cargo"
+      #     output-file-path: cargo-bench.txt
+      #     # Where the previous data file is stored
+      #     external-data-json-path: ./cache/benchmark-data.json
+      #     # GitHub API token to make a commit comment
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     # Enable alert commit comment
+      #     comment-on-alert: true
+      #     # Always comment on PRs
+      #     summary-always: true
+      #     # Mention in the commit comment
+      #     alert-comment-cc-users: "@maximumstock"
+      #     # Push and deploy GitHub pages branch automatically
+      #     # auto-push: true
+
+      # - name: Upload Results
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: benchmarks-results
+      #     path: benchmarks/results
 
   benchmark-annotate-pr:
     permissions:
