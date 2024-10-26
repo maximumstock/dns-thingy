@@ -34,6 +34,7 @@ if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     pkill -SIGTERM perf || true
 
     sleep 5 # give perf time to write the output file
+    sudo chmod 755 $OUTPUT_PATH/perf.data
 
     git clone --depth 1 http://github.com/brendangregg/FlameGraph
     cd FlameGraph
