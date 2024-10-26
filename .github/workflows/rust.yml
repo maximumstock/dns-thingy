@@ -147,7 +147,7 @@ jobs:
           key: ${{ runner.os }}-benchmark
 
       - name: Run Criterion benchmark
-        run: cargo +nightly bench | tee cargo-bench.txt
+        run: cargo bench | tee cargo-bench.txt
 
       - name: Store Criterion benchmark result
         uses: benchmark-action/github-action-benchmark@v1
