@@ -1,10 +1,5 @@
-let
-  rustOverlay = builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz";
-  pkgs = import <nixpkgs> {
-    overlays = [ (import rustOverlay) ];
-  };
-  dnspyre = import ./dnspyre.nix {};
-in
+{ pkgs }:
+
 pkgs.mkShell rec {
   buildInputs = with pkgs; [
     # DNS debugging
@@ -28,9 +23,10 @@ pkgs.mkShell rec {
     cargo-bloat
 
     # DNS Benchmarking
-    dnspyre
+    (import ./dnspyre.nix { inherit pkgs; })
     graph-cli
   ];
+
 
   RUST_BACKTRACE = 1;
   MOLD_PATH = "${pkgs.mold.out}/bin/mold";
