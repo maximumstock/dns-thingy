@@ -170,7 +170,7 @@ impl<'a> DnsParser<'a> {
         }
     }
 
-    fn parse_header(&mut self) -> Header {
+    pub fn parse_header(&mut self) -> Header {
         Header {
             request_id: self.advance_n::<2>().collate() as u16,
             flags: Flags::from(self.advance_n::<2>().collate() as u16),
@@ -181,20 +181,27 @@ impl<'a> DnsParser<'a> {
         }
     }
 
-    pub fn parse_answers(
-        mut self,
-    ) -> Result<Vec<Answer>, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn parse(&mut self) -> Result<DnsPacket, Box<dyn std::error::Error + Send + Sync>> {
         let header = self.parse_header();
 
+        // We only pick the first question, since multiple questions seem to be unsupported by most
+        // nameservers anyways, see https://stackoverflow.com/questions/4082081/requesting-a-and-aaaa-records-in-single-dns-query/4083071#4083071.
+        let mut first_question = None;
         for _ in 0..header.question_count {
-            self.parse_question();
+            if first_question.is_none() {
+                first_question = Some(self.parse_question());
+            }
         }
 
         let answers = (0..header.answer_count)
             .map(|_| self.parse_answer())
             .collect::<Vec<_>>();
 
-        Ok(answers)
+        Ok(DnsPacket {
+            header,
+            question: first_question.unwrap(),
+            answers,
+        })
     }
 
     /// TODO: have this on the final Packet type that we fully parse from the buffer
@@ -206,6 +213,13 @@ impl<'a> DnsParser<'a> {
         let first_question = self.parse_question();
         Ok((headers.request_id, first_question))
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct DnsPacket {
+    pub header: Header,
+    pub question: Question,
+    pub answers: Vec<Answer>,
 }
 
 pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {

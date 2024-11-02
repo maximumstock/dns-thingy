@@ -1,4 +1,4 @@
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum RecordType {
     A,     // 1 a host address
@@ -51,6 +51,35 @@ impl From<usize> for RecordType {
             255 => Self::ANY,
             256 => Self::URI,
             _ => Self::OTHER,
+        }
+    }
+}
+
+impl From<RecordType> for usize {
+    fn from(value: RecordType) -> Self {
+        match value {
+            RecordType::A => 1,
+            RecordType::NS => 2,
+            RecordType::MD => 3,
+            RecordType::MF => 4,
+            RecordType::CNAME => 5,
+            RecordType::SOA => 6,
+            RecordType::MB => 7,
+            RecordType::MG => 8,
+            RecordType::MR => 9,
+            RecordType::NULL => 10,
+            RecordType::WKS => 11,
+            RecordType::PTR => 12,
+            RecordType::HINFO => 13,
+            RecordType::MINFO => 14,
+            RecordType::MX => 15,
+            RecordType::TXT => 16,
+            RecordType::AXFR => 252,
+            RecordType::MAILB => 253,
+            RecordType::MAILA => 254,
+            RecordType::ANY => 255,
+            RecordType::URI => 256,
+            RecordType::OTHER => 0,
         }
     }
 }
