@@ -102,6 +102,7 @@ impl<'a> DnsParser<'a> {
         self.position += 1;
     }
 
+    // Question section format https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.2
     pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
@@ -110,6 +111,7 @@ impl<'a> DnsParser<'a> {
         }
     }
 
+    // Resource section format https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
     pub fn parse_answer(&mut self) -> Answer {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
@@ -127,43 +129,101 @@ impl<'a> DnsParser<'a> {
             r#type: record_type,
         };
 
+        // See Section 3.3 Standard RRs (https://datatracker.ietf.org/doc/html/rfc1035#section-3.3) for an overview
+        // of how to parse certain record types
         match record_type {
+            // CNAME https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
+            RecordType::CNAME => {
+                let cname = self.parse_domain_name();
+                Answer::CNAME { cname, meta }
+            }
+            // HINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.2
+            RecordType::HINFO => todo!(),
+            // MB https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.3
+            RecordType::MB => todo!(),
+            // MD https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.4
+            RecordType::MD => todo!(),
+            // MF https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.5
+            RecordType::MF => todo!(),
+            // MG https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.6
+            RecordType::MG => todo!(),
+            // MINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.7
+            RecordType::MINFO => todo!(),
+            // MR https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.8
+            RecordType::MR => todo!(),
+            // MX https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.9
+            RecordType::MX => {
+                let preference = self.advance_n::<2>().collate() as u16;
+                let exchange = self.parse_domain_name();
+                Answer::MX {
+                    meta,
+                    preference,
+                    exchange,
+                }
+            }
+            // NULL https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.10
+            RecordType::NULL => todo!(),
+            // NS https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11
+            RecordType::NS => {
+                let ns = self.parse_domain_name();
+                Answer::NS { ns, meta }
+            }
+            // PTR https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.12
+            RecordType::PTR => {
+                let domain_name = self.parse_domain_name();
+                Answer::PTR { meta, domain_name }
+            }
+            // SOA https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13
+            RecordType::SOA => {
+                let mname = self.parse_domain_name();
+                let rname = self.parse_domain_name();
+                let serial = self.advance_n::<4>().collate() as u32;
+                let refresh = self.advance_n::<4>().collate() as u32;
+                let retry = self.advance_n::<4>().collate() as u32;
+                let expire = self.advance_n::<4>().collate() as u32;
+                let minimum = self.advance_n::<4>().collate() as u32;
+
+                Answer::SOA {
+                    meta,
+                    mname,
+                    rname,
+                    serial,
+                    refresh,
+                    retry,
+                    expire,
+                    minimum,
+                }
+            }
+            // TXT https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.14
+            RecordType::TXT => todo!(),
+            // A https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1
             RecordType::A => {
-                let ipv4 = self.peek_n::<4>();
-                self.position += 4;
+                let ipv4 = self.advance_n::<4>();
                 Answer::A {
                     meta,
                     ipv4: ipv4.into(),
                 }
             }
-            RecordType::CNAME => {
-                let cname = self.parse_domain_name();
-                Answer::CNAME { cname, meta }
-            }
-            RecordType::NS => todo!(),
-            RecordType::MD => todo!(),
-            RecordType::MF => todo!(),
-            // todo
-            RecordType::SOA => todo!(),
-            RecordType::MB => todo!(),
-            RecordType::MG => todo!(),
-            RecordType::MR => todo!(),
-            RecordType::NULL => todo!(),
+            // WKS https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.2
             RecordType::WKS => todo!(),
-            RecordType::PTR => todo!(),
-            RecordType::HINFO => todo!(),
-            RecordType::MINFO => todo!(),
-            RecordType::MX => todo!(),
-            RecordType::TXT => todo!(),
             RecordType::AXFR => todo!(),
             RecordType::MAILB => todo!(),
             RecordType::MAILA => todo!(),
             RecordType::ANY => todo!(),
             RecordType::URI => todo!(),
-            RecordType::OTHER => todo!(),
+            RecordType::OTHER(_) => todo!(),
+            // AAAA https://datatracker.ietf.org/doc/html/rfc3596#section-2.2
+            RecordType::AAAA => {
+                let ipv6 = self.advance_n::<16>();
+                Answer::AAAA {
+                    meta,
+                    ipv6: ipv6.into(),
+                }
+            }
         }
     }
 
+    // Header section format https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
     pub fn parse_header(&mut self) -> Header {
         Header {
             request_id: self.advance_n::<2>().collate() as u16,
@@ -187,6 +247,8 @@ impl<'a> DnsParser<'a> {
             }
         }
 
+        // TODO: If we want to parse answers, we actually need to implement all QTYPEs, otherwise we fail at one
+        // of the various `todo()`s downstairfkjcvmcmmmkj,jkjmdiuwsiddfdqskjiqswdjjriourrzrrzuezuhfffhaaaaalaalkskdkjjwfkl
         let answers = (0..header.answer_count)
             .map(|_| self.parse_answer())
             .collect::<Vec<_>>();

@@ -18,13 +18,15 @@ pub enum RecordType {
     MINFO, // 14 mailbox or mail list information
     MX,    // 15 mail exchange
     TXT,   // 16 text strings1
-    // QTYPEs
+    // IPv6 extension, see https://datatracker.ietf.org/doc/html/rfc3596#section-2.1
+    AAAA,
+    // QTYPEs, see https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.3
     AXFR,  // 252 A request for a transfer of an entire zone
     MAILB, // 253 A request for mailbox-related records (MB, MG or MR)
     MAILA, // 254 A request for mail agent RRs (Obsolete - see MX)
     ANY,   // 255 A request for all records
     URI,   // 256
-    OTHER,
+    OTHER(usize),
 }
 
 impl From<usize> for RecordType {
@@ -46,12 +48,13 @@ impl From<usize> for RecordType {
             14 => Self::MINFO,
             15 => Self::MX,
             16 => Self::TXT,
+            28 => Self::AAAA,
             252 => Self::AXFR,
             253 => Self::MAILB,
             254 => Self::MAILA,
             255 => Self::ANY,
             256 => Self::URI,
-            _ => Self::OTHER,
+            a => Self::OTHER(a),
         }
     }
 }
@@ -75,12 +78,13 @@ impl From<RecordType> for usize {
             RecordType::MINFO => 14,
             RecordType::MX => 15,
             RecordType::TXT => 16,
+            RecordType::AAAA => 28,
             RecordType::AXFR => 252,
             RecordType::MAILB => 253,
             RecordType::MAILA => 254,
             RecordType::ANY => 255,
             RecordType::URI => 256,
-            RecordType::OTHER => 0,
+            RecordType::OTHER(v) => v,
         }
     }
 }

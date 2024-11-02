@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use super::record_type::RecordType;
 
@@ -13,22 +13,43 @@ pub struct AnswerMeta {
 
 #[derive(Debug, Clone)]
 pub enum Answer {
-    A { meta: AnswerMeta, ipv4: Ipv4Addr },
-    CNAME { meta: AnswerMeta, cname: String },
-}
-
-impl Answer {
-    pub fn get_domain_name(&self) -> &str {
-        match self {
-            Answer::A { meta, ipv4: _ } => &meta.name,
-            Answer::CNAME { meta, cname: _ } => &meta.name,
-        }
-    }
-
-    pub fn get_record_type(&self) -> RecordType {
-        match self {
-            Answer::A { meta, ipv4: _ } => meta.r#type,
-            Answer::CNAME { meta, cname: _ } => meta.r#type,
-        }
-    }
+    A {
+        meta: AnswerMeta,
+        ipv4: Ipv4Addr,
+    },
+    AAAA {
+        meta: AnswerMeta,
+        ipv6: Ipv6Addr,
+    },
+    CNAME {
+        meta: AnswerMeta,
+        cname: String,
+    },
+    NS {
+        ns: String,
+        meta: AnswerMeta,
+    },
+    MB {
+        domain_name: String,
+        meta: AnswerMeta,
+    },
+    MX {
+        preference: u16,
+        exchange: String,
+        meta: AnswerMeta,
+    },
+    PTR {
+        domain_name: String,
+        meta: AnswerMeta,
+    },
+    SOA {
+        meta: AnswerMeta,
+        mname: String,
+        rname: String,
+        serial: u32,
+        refresh: u32,
+        retry: u32,
+        expire: u32,
+        minimum: u32,
+    },
 }
