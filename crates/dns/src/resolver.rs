@@ -1,7 +1,7 @@
 use std::{net::UdpSocket, time::Duration};
 
 use crate::{
-    parse::parser::{encode_domain_name, DnsParser},
+    parse::parser::{encode_domain_name, DnsPacketBuffer, DnsParser},
     protocol::{answer::Answer, utils::generate_nx_response},
 };
 
@@ -26,8 +26,8 @@ pub fn resolve_domain(
         e
     })?;
 
-    let answers = DnsParser::new(&response).parse_answers()?;
-    Ok((answers, response))
+    let packet = DnsParser::new(&response).parse()?;
+    Ok((packet.answers, response))
 }
 
 #[allow(unused)]
@@ -49,18 +49,18 @@ async fn resolve_domain_async(
         e
     })?;
 
-    let answers = DnsParser::new(&response).parse_answers()?;
-    Ok((answers, response))
+    let packet = DnsParser::new(&response).parse()?;
+    Ok((packet.answers, response))
 }
 
 /// Asynchronously send the incoming raw DNS packet to the relay DNS server and
 /// pipes the response back to the originating socket.
 pub async fn relay_query_async(
-    original_query: &[u8; 512],
+    original_query: &DnsPacketBuffer,
     upstream_dns: &str,
     socket: &tokio::net::UdpSocket,
-) -> Result<[u8; 512], Box<dyn std::error::Error + Send + Sync>> {
-    if let Err(e) = socket.send_to(original_query, "8.8.8.8:53").await {
+) -> Result<DnsPacketBuffer, Box<dyn std::error::Error + Send + Sync>> {
+    if let Err(e) = socket.send_to(original_query, upstream_dns).await {
         println!("Failed to send request to {upstream_dns:?}: {e:?}");
         return Err(e.into());
     }
@@ -77,12 +77,12 @@ pub async fn relay_query_async(
 pub async fn stub_response_with_delay(
     id: Option<u16>,
     delay: Duration,
-) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<Answer>, DnsPacketBuffer), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_nx_response(id.unwrap_or(1337)).unwrap();
     tokio::time::sleep(delay).await;
     // Still parse answers, to keep the same API as the actual resolve function
-    let answers = DnsParser::new(&response).parse_answers()?;
-    Ok((answers, response))
+    let packet = DnsParser::new(&response).parse()?;
+    Ok((packet.answers, response))
 }
 
 /// Generates a recursive DNS query for INternet A records
