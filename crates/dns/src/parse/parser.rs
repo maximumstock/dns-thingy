@@ -40,12 +40,6 @@ impl<'a> DnsParser<'a> {
         &self.buf[self.position..self.position + n]
     }
 
-    fn peek_n<const N: usize>(&self) -> [u8; N] {
-        self.buf[self.position..self.position + N]
-            .try_into()
-            .unwrap()
-    }
-
     fn advance(&mut self, n: usize) -> &[u8] {
         let out = &self.buf[self.position..self.position + n];
         self.position += n;
@@ -105,13 +99,13 @@ impl<'a> DnsParser<'a> {
             }
         }
         // skip 0 byte at the end
-        self.advance_n::<1>();
+        self.position += 1;
     }
 
     pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
-            r#type: self.advance_n::<2>().collate(),
+            r#type: RecordType::from(self.advance_n::<2>().collate()),
             class: self.advance_n::<2>().collate(),
         }
     }

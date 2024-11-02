@@ -1,6 +1,7 @@
-#[derive(Debug, Copy, Clone, Hash)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum RecordType {
+    // TYPEs, see https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.2
     A,     // 1 a host address
     NS,    // 2 an authoritative name server
     MD,    // 3 a mail destination (Obsolete - use MX)

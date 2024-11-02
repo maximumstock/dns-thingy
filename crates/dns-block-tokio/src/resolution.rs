@@ -2,7 +2,7 @@ use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use dns::{
     parse::parser::{DnsPacket, DnsPacketBuffer, DnsParser},
-    protocol::utils::generate_nx_response,
+    protocol::{record_type::RecordType, utils::generate_nx_response},
     resolver::{relay_query_async, stub_response_with_delay},
 };
 use tokio::{sync::Mutex, time::Instant};
@@ -13,13 +13,13 @@ pub type RequestAssociationMap = HashMap<RequestKey, (SocketAddr, DnsPacket, Ins
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct RequestKey {
-    record_type: usize,
+    record_type: RecordType,
     request_id: u16,
     domain: String,
 }
 
 impl RequestKey {
-    pub fn new(record_type: usize, request_id: u16, domain: String) -> Self {
+    pub fn new(record_type: RecordType, request_id: u16, domain: String) -> Self {
         RequestKey {
             record_type,
             request_id,
@@ -71,7 +71,8 @@ pub async fn handle_resolution(
 
                     if !server_args.quiet {
                         println!(
-                            "Handled query for {} [{}ms]",
+                            "Handled {:?} query for {} [{}ms]",
+                            &reply_packet.question.r#type,
                             &reply_packet.question.domain_name,
                             started_at.elapsed().as_millis()
                         );
