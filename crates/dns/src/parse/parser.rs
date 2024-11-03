@@ -131,6 +131,7 @@ impl<'a> DnsParser<'a> {
 
         // See Section 3.3 Standard RRs (https://datatracker.ietf.org/doc/html/rfc1035#section-3.3) for an overview
         // of how to parse certain record types
+        // More record types to parse at some point: https://en.wikipedia.org/wiki/List_of_DNS_record_types
         match record_type {
             // CNAME https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
             RecordType::CNAME => {
@@ -204,13 +205,6 @@ impl<'a> DnsParser<'a> {
                     ipv4: ipv4.into(),
                 }
             }
-            // WKS https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.2
-            RecordType::WKS => todo!(),
-            RecordType::AXFR => todo!(),
-            RecordType::MAILB => todo!(),
-            RecordType::MAILA => todo!(),
-            RecordType::ANY => todo!(),
-            RecordType::URI => todo!(),
             RecordType::OTHER(_) => todo!(),
             // AAAA https://datatracker.ietf.org/doc/html/rfc3596#section-2.2
             RecordType::AAAA => {

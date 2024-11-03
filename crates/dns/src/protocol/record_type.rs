@@ -12,20 +12,20 @@ pub enum RecordType {
     MG,    // 8 a mail group member (EXPERIMENTAL)
     MR,    // 9 a mail rename domain name (EXPERIMENTAL)
     NULL,  // 10 a null RR (EXPERIMENTAL)
-    WKS,   // 11 a well known service description
+    // WKS,   // 11 a well known service description
     PTR,   // 12 a domain name pointer
     HINFO, // 13 host information
     MINFO, // 14 mailbox or mail list information
     MX,    // 15 mail exchange
     TXT,   // 16 text strings1
-    // IPv6 extension, see https://datatracker.ietf.org/doc/html/rfc3596#section-2.1
-    AAAA,
+    AAAA,  // IPv6 extension, see https://datatracker.ietf.org/doc/html/rfc3596#section-2.1
+    // HTTPS, // HTTPS & SVCB extension, see https://datatracker.ietf.org/doc/rfc9460/
     // QTYPEs, see https://datatracker.ietf.org/doc/html/rfc1035#section-3.2.3
-    AXFR,  // 252 A request for a transfer of an entire zone
-    MAILB, // 253 A request for mailbox-related records (MB, MG or MR)
-    MAILA, // 254 A request for mail agent RRs (Obsolete - see MX)
-    ANY,   // 255 A request for all records
-    URI,   // 256
+    // AXFR,  // 252 A request for a transfer of an entire zone
+    // MAILB, // 253 A request for mailbox-related records (MB, MG or MR)
+    // MAILA, // 254 A request for mail agent RRs (Obsolete - see MX)
+    // ANY,   // 255 A request for all records
+    // URI,   // 256
     OTHER(usize),
 }
 
@@ -42,18 +42,19 @@ impl From<usize> for RecordType {
             8 => Self::MG,
             9 => Self::MR,
             10 => Self::NULL,
-            11 => Self::WKS,
+            // 11 => Self::WKS,
             12 => Self::PTR,
             13 => Self::HINFO,
             14 => Self::MINFO,
             15 => Self::MX,
             16 => Self::TXT,
             28 => Self::AAAA,
-            252 => Self::AXFR,
-            253 => Self::MAILB,
-            254 => Self::MAILA,
-            255 => Self::ANY,
-            256 => Self::URI,
+            // 65 => Self::HTTPS,
+            // 252 => Self::AXFR,
+            // 253 => Self::MAILB,
+            // 254 => Self::MAILA,
+            // 255 => Self::ANY,
+            // 256 => Self::URI,
             a => Self::OTHER(a),
         }
     }
@@ -72,18 +73,19 @@ impl From<RecordType> for usize {
             RecordType::MG => 8,
             RecordType::MR => 9,
             RecordType::NULL => 10,
-            RecordType::WKS => 11,
+            // RecordType::WKS => 11,
             RecordType::PTR => 12,
             RecordType::HINFO => 13,
             RecordType::MINFO => 14,
             RecordType::MX => 15,
             RecordType::TXT => 16,
             RecordType::AAAA => 28,
-            RecordType::AXFR => 252,
-            RecordType::MAILB => 253,
-            RecordType::MAILA => 254,
-            RecordType::ANY => 255,
-            RecordType::URI => 256,
+            // RecordType::HTTPS => 65,
+            // RecordType::AXFR => 252,
+            // RecordType::MAILB => 253,
+            // RecordType::MAILA => 254,
+            // RecordType::ANY => 255,
+            // RecordType::URI => 256,
             RecordType::OTHER(v) => v,
         }
     }
