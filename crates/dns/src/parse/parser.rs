@@ -308,7 +308,7 @@ mod tests {
         input[0..3].copy_from_slice(&[0x3, 0x2, 0x1]);
 
         let parser = DnsParser::new(&input);
-        assert_eq!(parser.peek_n::<3>(), [0x3, 0x2, 0x1]);
+        assert_eq!(parser.peek(3), [0x3, 0x2, 0x1]);
         assert_eq!(parser.buf.len(), 512);
     }
 
