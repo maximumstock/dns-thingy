@@ -1,4 +1,4 @@
-use dns::protocol::answer::Answer;
+use dns::protocol::answer::AnswerValue;
 
 fn main() {
     let mut args = std::env::args();
@@ -12,20 +12,19 @@ fn main() {
         .expect("Error resolving DNS records");
 
     for answer in answers {
-        match answer {
-            Answer::A { meta, ipv4 } => println!("A\t{meta:?} - {ipv4}"),
-            Answer::CNAME { meta, cname } => println!("CNAME\t{meta:?} - {cname}"),
-            Answer::AAAA { meta, ipv6 } => println!("CNAME\t{meta:?} - {ipv6}"),
-            Answer::NS { ns, meta } => println!("CNAME\t{meta:?} - {ns}"),
-            Answer::MB { domain_name, meta } => println!("CNAME\t{meta:?} - {domain_name}"),
-            Answer::MX {
+        let meta = &answer.meta;
+        match answer.value {
+            AnswerValue::A { ipv4 } => println!("A\t{meta:?} - {ipv4}"),
+            AnswerValue::CNAME { cname } => println!("CNAME\t{meta:?} - {cname}"),
+            AnswerValue::AAAA { ipv6 } => println!("CNAME\t{meta:?} - {ipv6}"),
+            AnswerValue::NS { ns } => println!("CNAME\t{meta:?} - {ns}"),
+            AnswerValue::MB { domain_name } => println!("CNAME\t{meta:?} - {domain_name}"),
+            AnswerValue::MX {
                 preference,
                 exchange,
-                meta,
             } => println!("CNAME\t{meta:?} - {exchange} ({preference})"),
-            Answer::PTR { domain_name, meta } => println!("CNAME\t{meta:?} - {domain_name}"),
-            Answer::SOA {
-                meta,
+            AnswerValue::PTR { domain_name } => println!("CNAME\t{meta:?} - {domain_name}"),
+            AnswerValue::SOA {
                 mname,
                 rname,
                 serial: _,

@@ -1,5 +1,5 @@
 use crate::protocol::{
-    answer::{Answer, AnswerMeta},
+    answer::{Answer, AnswerMeta, AnswerValue},
     header::{Flags, Header},
     question::Question,
     record_type::RecordType,
@@ -18,6 +18,7 @@ pub trait Collate {
 }
 
 impl<'a> Collate for &'a [u8] {
+    /// Folds `&[u8; N]` into a single usize, so it only makes sense for `N` <= 8
     fn collate(self: &'a [u8]) -> usize {
         self.iter()
             .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
@@ -25,6 +26,7 @@ impl<'a> Collate for &'a [u8] {
 }
 
 impl<const N: usize> Collate for [u8; N] {
+    /// Folds `[u8; N]` into a single usize, so it only makes sense for `N` <= 8
     fn collate(self: [u8; N]) -> usize {
         self.iter()
             .fold(0usize, |acc, byte| acc << 8 | *byte as usize)
@@ -118,7 +120,7 @@ impl<'a> DnsParser<'a> {
         let name = self.parse_domain_name();
         let record_type: RecordType = self.advance_n::<2>().collate().into();
         let class = self.advance_n::<2>().collate();
-        let ttl = self.advance_n::<4>().collate();
+        let ttl = self.advance_n::<4>().collate() as u32;
         let len = self.advance_n::<2>().collate();
 
         let meta = AnswerMeta {
@@ -132,11 +134,11 @@ impl<'a> DnsParser<'a> {
         // See Section 3.3 Standard RRs (https://datatracker.ietf.org/doc/html/rfc1035#section-3.3) for an overview
         // of how to parse certain record types
         // More record types to parse at some point: https://en.wikipedia.org/wiki/List_of_DNS_record_types
-        match record_type {
+        let answer_value = match record_type {
             // CNAME https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
             RecordType::CNAME => {
                 let cname = self.parse_domain_name();
-                Answer::CNAME { cname, meta }
+                AnswerValue::CNAME { cname }
             }
             // HINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.2
             RecordType::HINFO => todo!(),
@@ -156,8 +158,7 @@ impl<'a> DnsParser<'a> {
             RecordType::MX => {
                 let preference = self.advance_n::<2>().collate() as u16;
                 let exchange = self.parse_domain_name();
-                Answer::MX {
-                    meta,
+                AnswerValue::MX {
                     preference,
                     exchange,
                 }
@@ -167,12 +168,12 @@ impl<'a> DnsParser<'a> {
             // NS https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11
             RecordType::NS => {
                 let ns = self.parse_domain_name();
-                Answer::NS { ns, meta }
+                AnswerValue::NS { ns }
             }
             // PTR https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.12
             RecordType::PTR => {
                 let domain_name = self.parse_domain_name();
-                Answer::PTR { meta, domain_name }
+                AnswerValue::PTR { domain_name }
             }
             // SOA https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13
             RecordType::SOA => {
@@ -184,8 +185,7 @@ impl<'a> DnsParser<'a> {
                 let expire = self.advance_n::<4>().collate() as u32;
                 let minimum = self.advance_n::<4>().collate() as u32;
 
-                Answer::SOA {
-                    meta,
+                AnswerValue::SOA {
                     mname,
                     rname,
                     serial,
@@ -200,21 +200,17 @@ impl<'a> DnsParser<'a> {
             // A https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1
             RecordType::A => {
                 let ipv4 = self.advance_n::<4>();
-                Answer::A {
-                    meta,
-                    ipv4: ipv4.into(),
-                }
+                AnswerValue::A { ipv4: ipv4.into() }
             }
             RecordType::OTHER(_) => todo!(),
             // AAAA https://datatracker.ietf.org/doc/html/rfc3596#section-2.2
             RecordType::AAAA => {
                 let ipv6 = self.advance_n::<16>();
-                Answer::AAAA {
-                    meta,
-                    ipv6: ipv6.into(),
-                }
+                AnswerValue::AAAA { ipv6: ipv6.into() }
             }
-        }
+        };
+
+        Answer::new(meta, answer_value)
     }
 
     // Header section format https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1

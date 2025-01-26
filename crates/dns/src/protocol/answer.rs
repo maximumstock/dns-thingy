@@ -7,43 +7,47 @@ pub struct AnswerMeta {
     pub name: String,
     pub r#type: RecordType,
     pub class: usize,
-    pub ttl: usize,
+    pub ttl: u32,
     pub len: usize,
 }
 
 #[derive(Debug, Clone)]
-pub enum Answer {
+pub struct Answer {
+    pub meta: AnswerMeta,
+    pub value: AnswerValue,
+}
+
+impl Answer {
+    pub fn new(meta: AnswerMeta, value: AnswerValue) -> Self {
+        Self { meta, value }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum AnswerValue {
     A {
-        meta: AnswerMeta,
         ipv4: Ipv4Addr,
     },
     AAAA {
-        meta: AnswerMeta,
         ipv6: Ipv6Addr,
     },
     CNAME {
-        meta: AnswerMeta,
         cname: String,
     },
     NS {
         ns: String,
-        meta: AnswerMeta,
     },
     MB {
         domain_name: String,
-        meta: AnswerMeta,
     },
     MX {
         preference: u16,
         exchange: String,
-        meta: AnswerMeta,
     },
     PTR {
         domain_name: String,
-        meta: AnswerMeta,
     },
     SOA {
-        meta: AnswerMeta,
         mname: String,
         rname: String,
         serial: u32,
