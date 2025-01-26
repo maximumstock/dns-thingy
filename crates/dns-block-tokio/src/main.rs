@@ -29,6 +29,7 @@ async fn main() {
         available_parallelism().unwrap().get()
     );
 
+    // TODO: benchmark this at some point
     // A) Create a pool of tasks to handle incoming DNS requests
     // start_server_without_task_delegation(server_args.clone()).await;
     // B) One acceptor task that spawns further tasks for each incoming request
