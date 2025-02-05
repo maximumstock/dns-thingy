@@ -26,11 +26,11 @@ pub enum RecordType {
     // MAILA, // 254 A request for mail agent RRs (Obsolete - see MX)
     // ANY,   // 255 A request for all records
     // URI,   // 256
-    OTHER(usize),
+    OTHER(u16),
 }
 
-impl From<usize> for RecordType {
-    fn from(input: usize) -> Self {
+impl From<u16> for RecordType {
+    fn from(input: u16) -> Self {
         match input {
             1 => Self::A,
             2 => Self::NS,
@@ -60,7 +60,7 @@ impl From<usize> for RecordType {
     }
 }
 
-impl From<RecordType> for usize {
+impl From<RecordType> for u16 {
     fn from(value: RecordType) -> Self {
         match value {
             RecordType::A => 1,

@@ -108,8 +108,8 @@ impl<'a> DnsParser<'a> {
     pub fn parse_question(&mut self) -> Question {
         Question {
             domain_name: self.parse_domain_name(),
-            r#type: RecordType::from(self.advance_n::<2>().collate()),
-            class: self.advance_n::<2>().collate(),
+            r#type: RecordType::from(self.advance_n::<2>().collate() as u16),
+            class: self.advance_n::<2>().collate() as u16,
         }
     }
 
@@ -118,10 +118,10 @@ impl<'a> DnsParser<'a> {
         // parse resource record
         // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
         let name = self.parse_domain_name();
-        let record_type: RecordType = self.advance_n::<2>().collate().into();
-        let class = self.advance_n::<2>().collate();
+        let record_type: RecordType = (self.advance_n::<2>().collate() as u16).into();
+        let class = self.advance_n::<2>().collate() as u16;
         let ttl = self.advance_n::<4>().collate() as u32;
-        let len = self.advance_n::<2>().collate();
+        let len = self.advance_n::<2>().collate() as u16;
 
         let meta = AnswerMeta {
             name,
@@ -202,12 +202,12 @@ impl<'a> DnsParser<'a> {
                 let ipv4 = self.advance_n::<4>();
                 AnswerValue::A { ipv4: ipv4.into() }
             }
-            RecordType::OTHER(_) => todo!(),
             // AAAA https://datatracker.ietf.org/doc/html/rfc3596#section-2.2
             RecordType::AAAA => {
                 let ipv6 = self.advance_n::<16>();
                 AnswerValue::AAAA { ipv6: ipv6.into() }
             }
+            RecordType::OTHER(_) => todo!(),
         };
 
         Answer::new(meta, answer_value)
@@ -238,7 +238,7 @@ impl<'a> DnsParser<'a> {
         }
 
         // TODO: If we want to parse answers, we actually need to implement all QTYPEs, otherwise we fail at one
-        // of the various `todo()`s downstairfkjcvmcmmmkj,jkjmdiuwsiddfdqskjiqswdjjriourrzrrzuezuhfffhaaaaalaalkskdkjjwfkl
+        // of the various `todo()`s downstream
         let answers = (0..header.answer_count)
             .map(|_| self.parse_answer())
             .collect::<Vec<_>>();
@@ -249,16 +249,6 @@ impl<'a> DnsParser<'a> {
             answers,
         })
     }
-
-    /// TODO: have this on the final Packet type that we fully parse from the buffer
-    pub fn get_relay_information(
-        &mut self,
-    ) -> Result<(u16, Question), Box<dyn std::error::Error + Send + Sync>> {
-        self.position = 0;
-        let headers = self.parse_header();
-        let first_question = self.parse_question();
-        Ok((headers.request_id, first_question))
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -268,6 +258,11 @@ pub struct DnsPacket {
     pub answers: Vec<Answer>,
 }
 
+// TODO: Compared to the actual domain name encoding schema, this is very inefficient and might break
+// with many long record names, since we don't reduce subdomains. Either we need that or we
+// should just never encode this ourselves and skip serialization altogether, since we only need
+// two write `DnsPacket` when alterting TTL values, which we can without any issues by just jumping
+// to the relevant byte elements via the parser.
 pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
     let mut encoded = Vec::with_capacity(domain_name.len());
     domain_name.split('.').for_each(|part| {

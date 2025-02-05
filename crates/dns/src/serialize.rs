@@ -1,8 +1,9 @@
-use crate::parse::parser::DnsPacketBuffer;
-
-use super::{
-    header::{Flags, Header},
-    response_code::ResponseCode,
+use crate::{
+    parser::DnsPacketBuffer,
+    protocol::{
+        header::{Flags, Header},
+        response_code::ResponseCode,
+    },
 };
 
 pub fn generate_nx_response(id: u16) -> Result<DnsPacketBuffer, Box<dyn std::error::Error>> {
@@ -27,7 +28,7 @@ pub fn generate_nx_response(id: u16) -> Result<DnsPacketBuffer, Box<dyn std::err
 pub fn generate_response_with_answer(
     id: u16,
     response_code: ResponseCode,
-) -> Result<[u8; 512], Box<dyn std::error::Error>> {
+) -> Result<DnsPacketBuffer, Box<dyn std::error::Error>> {
     let flags = Flags {
         response_code: response_code.into(),
         query: false,

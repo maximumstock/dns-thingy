@@ -6,9 +6,9 @@ use super::record_type::RecordType;
 pub struct AnswerMeta {
     pub name: String,
     pub r#type: RecordType,
-    pub class: usize,
+    pub class: u16,
     pub ttl: u32,
-    pub len: usize,
+    pub len: u16,
 }
 
 #[derive(Debug, Clone)]

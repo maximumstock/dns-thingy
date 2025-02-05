@@ -1,8 +1,9 @@
 use std::{net::UdpSocket, time::Duration};
 
 use crate::{
-    parse::parser::{encode_domain_name, DnsPacketBuffer, DnsParser},
-    protocol::{answer::Answer, utils::generate_nx_response},
+    parser::{encode_domain_name, DnsPacketBuffer, DnsParser},
+    protocol::answer::Answer,
+    serialize::generate_nx_response,
 };
 
 /// Synchronously resolves INternet A records for `domain` using the DNS server `dns`

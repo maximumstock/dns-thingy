@@ -4,5 +4,5 @@ use super::record_type::RecordType;
 pub struct Question {
     pub domain_name: String,
     pub r#type: RecordType,
-    pub class: usize,
+    pub class: u16,
 }
