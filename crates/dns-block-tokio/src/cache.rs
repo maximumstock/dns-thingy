@@ -21,7 +21,8 @@ impl RequestCache {
         Self::default()
     }
 
-    pub fn get(&mut self, key: CacheKey, new_request_id: u16) -> Option<CacheValue> {
+    /// Reads a valid, existing entry for the cache key and automatically invalidates outdated cache entries.
+    pub fn get(&mut self, key: CacheKey, new_request_id: u16) -> Option<DnsPacketBuffer> {
         match self.inner.entry(key) {
             Vacant(_) => None,
             Occupied(mut entry) => {
@@ -29,15 +30,13 @@ impl RequestCache {
                 if cached.is_valid() {
                     // todo: maybe we should not re-parse the packet on every cache hit
                     let parser = DnsParser::new(&cached.packet);
+                    // We construct a version of the cached DNS reply that has up-to-date answer TTL values
+                    // and is compatible with the given `new_request_id`, but we never update the cached data.
                     let updated_packet: DnsPacketBuffer = parser
                         .update_cached_packet(cached.get_remaining_ttl(), new_request_id)
                         .expect("Could not parse and reduce ttl of DNS packet answers");
 
-                    // After constructing a new reply packet, we need to update the cache entry
-                    cached.packet = updated_packet;
-                    cached.cached_at = Instant::now();
-
-                    Some(cached.clone())
+                    Some(updated_packet)
                 } else {
                     entry.remove_entry();
                     None

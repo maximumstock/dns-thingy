@@ -270,7 +270,7 @@ impl<'a> DnsParser<'a> {
     ) -> Result<[u8; 512], Box<dyn std::error::Error + Send + Sync>> {
         self.position = 0;
 
-        let seconds = ttl_reduction.as_secs() as u32; // Each entry has a u32 TTL
+        let seconds = ttl_reduction.as_secs() as u32;
         let mut buf_copy = *self.buf;
 
         self.parse()?;

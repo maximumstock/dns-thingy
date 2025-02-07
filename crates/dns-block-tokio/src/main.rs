@@ -117,15 +117,12 @@ async fn process(
         let start = Instant::now();
 
         let cache_key = CacheKey::from_packet(&request_packet);
-        if let Some(value) = request_cache
+        if let Some(dns_reply) = request_cache
             .write()
             .await
             .get(cache_key.clone(), request_packet.header.request_id)
         {
-            receiving_socket
-                .send_to(&value.packet, sender)
-                .await
-                .unwrap();
+            receiving_socket.send_to(&dns_reply, sender).await.unwrap();
 
             // todo: record cache hit
 
