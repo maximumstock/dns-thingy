@@ -30,12 +30,6 @@ async fn main() {
         available_parallelism().unwrap().get()
     );
 
-    // TODO: benchmark this at some point
-    // A) Create a pool of tasks to handle incoming DNS requests
-    // start_server_without_task_delegation(server_args.clone()).await;
-    // B) One acceptor task that spawns further tasks for each incoming request
-    // start_server_with_acceptors(server_args.clone(), 1).await;
-    // C) Multiple acceptor tasks that spawn further tasks for each incoming request
     start_server_with_acceptors(server_args, get_acceptor_pool_size()).await;
 }
 
@@ -99,14 +93,14 @@ fn get_acceptor_pool_size() -> u8 {
 
 async fn process(
     receiving_socket: &UdpSocket,
-    upstream_socket: &UdpSocket,
-    original_query: &DnsPacketBuffer,
+    relay_socket: &UdpSocket,
+    client_packet: &DnsPacketBuffer,
     sender: &SocketAddr,
     server_args: &ServerArgs,
     request_associations: Arc<RwLock<RequestAssociationMap>>,
     request_cache: Arc<RwLock<RequestCache>>,
 ) {
-    let mut parser = DnsParser::new(original_query);
+    let mut parser = DnsParser::new(client_packet);
     let request_packet = parser.parse().unwrap();
 
     if server_args.benchmark {
@@ -156,86 +150,59 @@ async fn process(
             (*sender, request_packet, start, cache_key),
         );
 
-        async move {
-            match relay_query_async(original_query, &server_args.dns_relay, upstream_socket).await {
-                Ok(reply_buffer) => {
-                    let reply_packet = DnsParser::new(&reply_buffer).parse().unwrap();
-                    let request_key = RequestKey::from_packet(&reply_packet);
-                    let request_data = request_associations.write().await.remove(&request_key);
+        // We send the incoming client DNS packet to the configured relay DNS server via `relay_socket` and get back
+        // a DNS response as a raw `DnsPacketBuffer` or an error.
+        match relay_query_async(client_packet, &server_args.dns_relay, relay_socket).await {
+            Ok(reply_buffer) => {
+                // todo: limit the number of times we need to parse DNS packets
+                let reply_packet = DnsParser::new(&reply_buffer).parse().unwrap();
+                let unique_request_key = RequestKey::from_packet(&reply_packet);
+                let request_data = request_associations
+                    .write()
+                    .await
+                    .remove(&unique_request_key);
 
-                    match request_data {
-                        Some((client_address, request_packet, started_at, cache_key)) => {
-                            debug_assert_eq!(
-                                reply_packet.question.domain_name,
-                                request_packet.question.domain_name
+                match request_data {
+                    Some((client_address, request_packet, started_at, cache_key)) => {
+                        debug_assert_eq!(
+                            reply_packet.question.domain_name,
+                            request_packet.question.domain_name
+                        );
+                        debug_assert_eq!(
+                            reply_packet.header.request_id,
+                            request_packet.header.request_id
+                        );
+
+                        // Send the upstream DNS reply to the original client that sent the DNS query.
+                        // We need to use the same client that we used to accept the client's query, so that
+                        // the client does not invalidate our response because of a port mismatch, since
+                        // any other socket would not be on the DNS listening port.
+                        receiving_socket
+                            .send_to(&reply_buffer, client_address)
+                            .await
+                            .unwrap();
+
+                        // todo: record handled response metric
+
+                        request_cache.write().await.set(cache_key, reply_buffer);
+
+                        if !server_args.quiet {
+                            println!(
+                                "Handled {:?} query for {} [{}ms]",
+                                &reply_packet.question.r#type,
+                                &reply_packet.question.domain_name,
+                                started_at.elapsed().as_millis()
                             );
-                            debug_assert_eq!(
-                                reply_packet.header.request_id,
-                                request_packet.header.request_id
-                            );
-
-                            // Send the upstream DNS reply to the original client that sent the DNS query.
-                            // We need to use the same client that we used to accept the client's query, so that
-                            // the client does not invalidate our response because of a port mismatch, since
-                            // any other socket would not be on the DNS listening port.
-                            receiving_socket
-                                .send_to(&reply_buffer, client_address)
-                                .await
-                                .unwrap();
-
-                            // todo: record handled response metric
-
-                            request_cache.write().await.set(cache_key, reply_buffer);
-
-                            if !server_args.quiet {
-                                println!(
-                                    "Handled {:?} query for {} [{}ms]",
-                                    &reply_packet.question.r#type,
-                                    &reply_packet.question.domain_name,
-                                    started_at.elapsed().as_millis()
-                                );
-                            }
-                        }
-                        None => {
-                            eprintln!("No matching sender address for {:?}", request_key);
                         }
                     }
-                }
-                Err(e) => {
-                    dbg!(e);
+                    None => {
+                        eprintln!("No matching sender address for {:?}", unique_request_key);
+                    }
                 }
             }
+            Err(e) => {
+                dbg!(e);
+            }
         }
-        .await;
     }
 }
-
-// #[allow(unused)]
-// async fn start_server_without_task_delegation(server_args: ServerArgs) {
-//     let server_args = Arc::new(server_args);
-//     let socket = Arc::new(
-//         tokio::net::UdpSocket::bind((server_args.bind_address.clone(), server_args.bind_port))
-//             .await
-//             .unwrap(),
-//     );
-
-//     let mut handles = vec![];
-//     for _ in 0..get_acceptor_pool_size() {
-//         let server_args = Arc::clone(&server_args);
-//         let socket = Arc::clone(&socket);
-
-//         let handle = tokio::spawn(async move {
-//             loop {
-//                 let mut buffer = [0u8; 512];
-//                 let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
-
-//                 process(&socket, &buffer, &sender, &server_args).await;
-//             }
-//         });
-//         handles.push(handle);
-//     }
-
-//     for handle in handles {
-//         handle.await.unwrap();
-//     }
-// }
