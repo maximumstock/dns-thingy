@@ -60,7 +60,7 @@ jobs:
           strip releases/*
 
       - name: Upload Release Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: releases
           path: releases
@@ -129,7 +129,7 @@ jobs:
   #         name: maximumstock
   #         authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
-  #     - uses: actions/download-artifact@v3
+  #     - uses: actions/download-artifact@v4
   #       id: download
   #       with:
   #         name: releases
@@ -141,7 +141,7 @@ jobs:
   #         nix-shell ci.nix --command "./benchmarks/run.sh"
 
   #     - name: Upload Results
-  #       uses: actions/upload-artifact@v3
+  #       uses: actions/upload-artifact@v4
   #       with:
   #         name: benchmark-results
   #         path: benchmarks
