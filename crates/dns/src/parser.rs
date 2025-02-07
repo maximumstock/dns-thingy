@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::protocol::{
     answer::{Answer, AnswerMeta, AnswerValue},
     header::{Flags, Header},
@@ -11,6 +13,8 @@ pub type DnsPacketBuffer = [u8; 512];
 pub struct DnsParser<'a> {
     pub buf: &'a DnsPacketBuffer,
     position: usize,
+    /// Internal metadata about the buffer indices of the answer TTL fields live
+    answer_ttl_indices: Vec<usize>,
 }
 
 pub trait Collate {
@@ -35,7 +39,11 @@ impl<const N: usize> Collate for [u8; N] {
 
 impl<'a> DnsParser<'a> {
     pub fn new(buf: &'a DnsPacketBuffer) -> Self {
-        Self { buf, position: 0 }
+        Self {
+            buf,
+            position: 0,
+            answer_ttl_indices: vec![],
+        }
     }
 
     fn peek(&self, n: usize) -> &[u8] {
@@ -120,6 +128,7 @@ impl<'a> DnsParser<'a> {
         let name = self.parse_domain_name();
         let record_type: RecordType = (self.advance_n::<2>().collate() as u16).into();
         let class = self.advance_n::<2>().collate() as u16;
+        self.answer_ttl_indices.push(self.position);
         let ttl = self.advance_n::<4>().collate() as u32;
         let len = self.advance_n::<2>().collate() as u16;
 
@@ -248,6 +257,38 @@ impl<'a> DnsParser<'a> {
             question: first_question.unwrap(),
             answers,
         })
+    }
+
+    /// This is a hack to take an existing `DnsPacketBuffer` server response and alter it so it can be re-used
+    /// as a response to a later, identical DNS question.
+    /// In order to do so, we need to make sure the DNS answer TTL values are decreased accordingly and the
+    /// header request id has to be overwriten by the new DNS question's request id.
+    pub fn update_cached_packet(
+        mut self,
+        ttl_reduction: Duration,
+        new_request_id: u16,
+    ) -> Result<[u8; 512], Box<dyn std::error::Error + Send + Sync>> {
+        self.position = 0;
+
+        let seconds = ttl_reduction.as_secs() as u32; // Each entry has a u32 TTL
+        let mut buf_copy = *self.buf;
+
+        self.parse()?;
+
+        println!("[Cache] Reducing ttl by {}s", seconds);
+
+        // Update the TTL values
+        for &start_index in &self.answer_ttl_indices {
+            let old_ttl = buf_copy[start_index..start_index + 4].collate() as u32;
+            let new_ttl = old_ttl - seconds;
+            buf_copy[start_index..start_index + 4]
+                .copy_from_slice(new_ttl.to_be_bytes().as_slice());
+        }
+
+        // Update the request id to match
+        buf_copy[0..2].copy_from_slice(new_request_id.to_be_bytes().as_slice());
+
+        Ok(buf_copy)
     }
 }
 

@@ -1,11 +1,13 @@
+mod cache;
 mod cli;
 mod recording;
 mod resolution;
 
+use cache::{CacheKey, RequestCache};
 use cli::ServerArgs;
 use resolution::{handle_benchmark, handle_filter, RequestAssociationMap, RequestKey};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, thread::available_parallelism};
-use tokio::{net::UdpSocket, sync::Mutex, time::Instant};
+use tokio::{net::UdpSocket, sync::RwLock, time::Instant};
 
 use dns::{
     filter::is_domain_blacklisted,
@@ -45,7 +47,8 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
             .unwrap(),
     );
     let upstream_socket = Arc::new(tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap());
-    let request_associations = Arc::new(Mutex::new(HashMap::new()));
+    let request_associations = Arc::new(RwLock::new(HashMap::new()));
+    let request_cache = Arc::new(RwLock::new(RequestCache::new()));
 
     let mut handles = vec![];
     for _ in 0..num_acceptor_tasks {
@@ -53,6 +56,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
         let socket = Arc::clone(&socket);
         let upstream_socket = Arc::clone(&upstream_socket);
         let request_associations = Arc::clone(&request_associations);
+        let request_cache = Arc::clone(&request_cache);
 
         let handle = tokio::spawn(async move {
             loop {
@@ -60,6 +64,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
                 let socket = Arc::clone(&socket);
                 let upstream_socket = Arc::clone(&upstream_socket);
                 let request_associations = Arc::clone(&request_associations);
+                let request_cache = Arc::clone(&request_cache);
 
                 let mut buffer = [0u8; 512];
                 let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
@@ -72,6 +77,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
                         &sender,
                         &server_args,
                         request_associations,
+                        request_cache,
                     )
                     .await;
                 });
@@ -85,6 +91,8 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
     }
 }
 
+/// Returns the number of acceptor Tokio tasks to spawn, based on the number
+/// of CPU cores that this application runs on.
 fn get_acceptor_pool_size() -> u8 {
     available_parallelism().unwrap().get() as u8 / 2
 }
@@ -95,7 +103,8 @@ async fn process(
     original_query: &DnsPacketBuffer,
     sender: &SocketAddr,
     server_args: &ServerArgs,
-    request_associations: Arc<Mutex<RequestAssociationMap>>,
+    request_associations: Arc<RwLock<RequestAssociationMap>>,
+    request_cache: Arc<RwLock<RequestCache>>,
 ) {
     let mut parser = DnsParser::new(original_query);
     let request_packet = parser.parse().unwrap();
@@ -112,24 +121,50 @@ async fn process(
         handle_filter(server_args, &request_packet, receiving_socket, sender).await;
     } else {
         let start = Instant::now();
+
+        let cache_key = CacheKey::from_packet(&request_packet);
+        if let Some(value) = request_cache
+            .write()
+            .await
+            .get(cache_key.clone(), request_packet.header.request_id)
+        {
+            receiving_socket
+                .send_to(&value.packet, sender)
+                .await
+                .unwrap();
+
+            // todo: record cache hit
+
+            if !server_args.quiet {
+                println!(
+                    "[Cache Hit] Handled {:?} query for {} [{}ms]",
+                    &request_packet.question.r#type,
+                    &request_packet.question.domain_name,
+                    start.elapsed().as_millis()
+                );
+            }
+
+            return;
+        }
+
         // Create a unqiue key that identifies the query, store it in a shared hashmap and
         // pass it to `handle_resolution` so it can later lookup who to send it to.
         let sender_key = RequestKey::from_packet(&request_packet);
 
-        request_associations
-            .lock()
-            .await
-            .insert(sender_key.clone(), (*sender, request_packet, start));
+        request_associations.write().await.insert(
+            sender_key.clone(),
+            (*sender, request_packet, start, cache_key),
+        );
 
         async move {
             match relay_query_async(original_query, &server_args.dns_relay, upstream_socket).await {
                 Ok(reply_buffer) => {
                     let reply_packet = DnsParser::new(&reply_buffer).parse().unwrap();
                     let request_key = RequestKey::from_packet(&reply_packet);
-                    let request_data = request_associations.lock().await.remove(&request_key);
+                    let request_data = request_associations.write().await.remove(&request_key);
 
                     match request_data {
-                        Some((client_address, request_packet, started_at)) => {
+                        Some((client_address, request_packet, started_at, cache_key)) => {
                             debug_assert_eq!(
                                 reply_packet.question.domain_name,
                                 request_packet.question.domain_name
@@ -149,6 +184,8 @@ async fn process(
                                 .unwrap();
 
                             // todo: record handled response metric
+
+                            request_cache.write().await.set(cache_key, reply_buffer);
 
                             if !server_args.quiet {
                                 println!(

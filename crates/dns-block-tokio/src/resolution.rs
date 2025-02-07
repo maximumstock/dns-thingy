@@ -1,15 +1,14 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr};
 
 use dns::{
-    parse::parser::{DnsPacket, DnsPacketBuffer, DnsParser},
-    protocol::{record_type::RecordType, serialize::generate_nx_response},
-    resolver::{relay_query_async, stub_response_with_delay},
+    parser::DnsPacket, protocol::record_type::RecordType, resolver::stub_response_with_delay,
+    serialize::generate_nx_response,
 };
-use tokio::{sync::Mutex, time::Instant};
+use tokio::time::Instant;
 
-use crate::cli::ServerArgs;
+use crate::{cache::CacheKey, cli::ServerArgs};
 
-pub type RequestAssociationMap = HashMap<RequestKey, (SocketAddr, DnsPacket, Instant)>;
+pub type RequestAssociationMap = HashMap<RequestKey, (SocketAddr, DnsPacket, Instant, CacheKey)>;
 
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct RequestKey {
@@ -27,7 +26,7 @@ impl RequestKey {
         }
     }
 
-    pub(crate) fn from_packet(packet: &dns::parse::parser::DnsPacket) -> Self {
+    pub(crate) fn from_packet(packet: &DnsPacket) -> Self {
         RequestKey::new(
             packet.question.r#type,
             packet.header.request_id,
