@@ -252,6 +252,8 @@ impl<'a> DnsParser<'a> {
             .map(|_| self.parse_answer())
             .collect::<Vec<_>>();
 
+        // TODO: parse authority section
+
         Ok(DnsPacket {
             header,
             question: first_question.unwrap(),
@@ -275,7 +277,7 @@ impl<'a> DnsParser<'a> {
 
         self.parse()?;
 
-        println!("[Cache] Reducing ttl by {}s", seconds);
+        dbg!("[Cache] Reducing ttl by {}s", seconds);
 
         // Update the TTL values
         for &start_index in &self.answer_ttl_indices {
@@ -284,6 +286,8 @@ impl<'a> DnsParser<'a> {
             buf_copy[start_index..start_index + 4]
                 .copy_from_slice(new_ttl.to_be_bytes().as_slice());
         }
+
+        // TODO: update authority section TTL values
 
         // Update the request id to match
         buf_copy[0..2].copy_from_slice(new_request_id.to_be_bytes().as_slice());

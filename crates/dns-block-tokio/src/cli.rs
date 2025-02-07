@@ -31,6 +31,10 @@ pub struct ServerArgs {
     /// Whether to disable logging
     #[arg(short, long, default_value_t = false)]
     pub quiet: bool,
+
+    /// Enables DNS reply caching
+    #[arg(short, long, default_value_t = false)]
+    pub caching_enabled: bool,
 }
 
 impl ServerArgs {
