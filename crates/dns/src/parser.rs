@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::protocol::{
-    answer::{Answer, AnswerMeta, AnswerValue},
+    answer::{ResourceRecord, ResourceRecordData, ResourceRecordMeta},
     header::{Flags, Header},
     question::Question,
     record_type::RecordType,
@@ -122,67 +122,66 @@ impl<'a> DnsParser<'a> {
     }
 
     // Resource section format https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
-    pub fn parse_answer(&mut self) -> Answer {
-        // parse resource record
-        // https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.3
+    pub fn parse_resource_record(
+        &mut self,
+    ) -> Result<ResourceRecord, Box<dyn std::error::Error + Send + Sync>> {
         let name = self.parse_domain_name();
         let record_type: RecordType = (self.advance_n::<2>().collate() as u16).into();
         let class = self.advance_n::<2>().collate() as u16;
-        self.answer_ttl_indices.push(self.position);
-        let ttl = self.advance_n::<4>().collate() as u32;
+        let ttl = self.record_ttl();
         let len = self.advance_n::<2>().collate() as u16;
 
-        let meta = AnswerMeta {
+        let meta = ResourceRecordMeta {
             name,
             class,
             len,
             ttl,
-            r#type: record_type,
+            record_type,
         };
 
         // See Section 3.3 Standard RRs (https://datatracker.ietf.org/doc/html/rfc1035#section-3.3) for an overview
         // of how to parse certain record types
         // More record types to parse at some point: https://en.wikipedia.org/wiki/List_of_DNS_record_types
-        let answer_value = match record_type {
+        let resource_record_data = match record_type {
             // CNAME https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
             RecordType::CNAME => {
                 let cname = self.parse_domain_name();
-                AnswerValue::CNAME { cname }
+                ResourceRecordData::CNAME { cname }
             }
-            // HINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.2
-            RecordType::HINFO => todo!(),
-            // MB https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.3
-            RecordType::MB => todo!(),
-            // MD https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.4
-            RecordType::MD => todo!(),
-            // MF https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.5
-            RecordType::MF => todo!(),
-            // MG https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.6
-            RecordType::MG => todo!(),
-            // MINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.7
-            RecordType::MINFO => todo!(),
-            // MR https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.8
-            RecordType::MR => todo!(),
-            // MX https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.9
+            // // HINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.2
+            // RecordType::HINFO => todo!(),
+            // // MB https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.3
+            // RecordType::MB => todo!(),
+            // // MD https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.4
+            // RecordType::MD => todo!(),
+            // // MF https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.5
+            // RecordType::MF => todo!(),
+            // // MG https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.6
+            // RecordType::MG => todo!(),
+            // // MINFO https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.7
+            // RecordType::MINFO => todo!(),
+            // // MR https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.8
+            // RecordType::MR => todo!(),
+            // // MX https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.9
             RecordType::MX => {
                 let preference = self.advance_n::<2>().collate() as u16;
                 let exchange = self.parse_domain_name();
-                AnswerValue::MX {
+                ResourceRecordData::MX {
                     preference,
                     exchange,
                 }
             }
-            // NULL https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.10
-            RecordType::NULL => todo!(),
+            // // NULL https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.10
+            // RecordType::NULL => todo!(),
             // NS https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11
             RecordType::NS => {
                 let ns = self.parse_domain_name();
-                AnswerValue::NS { ns }
+                ResourceRecordData::NS { ns }
             }
             // PTR https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.12
             RecordType::PTR => {
                 let domain_name = self.parse_domain_name();
-                AnswerValue::PTR { domain_name }
+                ResourceRecordData::PTR { domain_name }
             }
             // SOA https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13
             RecordType::SOA => {
@@ -194,7 +193,7 @@ impl<'a> DnsParser<'a> {
                 let expire = self.advance_n::<4>().collate() as u32;
                 let minimum = self.advance_n::<4>().collate() as u32;
 
-                AnswerValue::SOA {
+                ResourceRecordData::SOA {
                     mname,
                     rname,
                     serial,
@@ -205,21 +204,37 @@ impl<'a> DnsParser<'a> {
                 }
             }
             // TXT https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.14
-            RecordType::TXT => todo!(),
+            // RecordType::TXT => todo!(),
             // A https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1
             RecordType::A => {
                 let ipv4 = self.advance_n::<4>();
-                AnswerValue::A { ipv4: ipv4.into() }
+                ResourceRecordData::A { ipv4: ipv4.into() }
             }
             // AAAA https://datatracker.ietf.org/doc/html/rfc3596#section-2.2
             RecordType::AAAA => {
                 let ipv6 = self.advance_n::<16>();
-                AnswerValue::AAAA { ipv6: ipv6.into() }
+                ResourceRecordData::AAAA { ipv6: ipv6.into() }
             }
-            RecordType::OTHER(_) => todo!(),
+            unimplemented => {
+                // For record types that we have not implemented yet, we still want to advance the parser position,
+                // so the remaining packet can be parsed. Instead of failing, we can mark this parsed resource record
+                // data as `Unknown`, so upstream doesn't know what is inside the resource record data field, but it
+                // still has all necessary information from the shared resource record header, which we parsed in `meta`.
+                println!(
+                    "[Debug]: Encountered unimplemented record type {:?}",
+                    unimplemented
+                );
+                self.advance(meta.len.into());
+                ResourceRecordData::Unknown
+            }
         };
 
-        Answer::new(meta, answer_value)
+        Ok(ResourceRecord::new(meta, resource_record_data))
+    }
+
+    fn record_ttl(&mut self) -> u32 {
+        self.answer_ttl_indices.push(self.position);
+        self.advance_n::<4>().collate() as u32
     }
 
     // Header section format https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
@@ -234,6 +249,7 @@ impl<'a> DnsParser<'a> {
         }
     }
 
+    /// Parses DNS packets according to the following format: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1
     pub fn parse(&mut self) -> Result<DnsPacket, Box<dyn std::error::Error + Send + Sync>> {
         let header = self.parse_header();
 
@@ -246,25 +262,34 @@ impl<'a> DnsParser<'a> {
             }
         }
 
-        // TODO: If we want to parse answers, we actually need to implement all QTYPEs, otherwise we fail at one
-        // of the various `todo()`s downstream
+        // Parse answer section
         let answers = (0..header.answer_count)
-            .map(|_| self.parse_answer())
-            .collect::<Vec<_>>();
+            .map(|_| self.parse_resource_record())
+            .collect::<Result<Vec<_>, _>>()?;
 
-        // TODO: parse authority section
+        // Parse authority section
+        let authorities = (0..header.authority_count)
+            .map(|_| self.parse_resource_record())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Parse authority section
+        let additional = (0..header.additional_count)
+            .map(|_| self.parse_resource_record())
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(DnsPacket {
             header,
             question: first_question.unwrap(),
             answers,
+            authorities,
+            additional,
         })
     }
 
     /// This is a hack to take an existing `DnsPacketBuffer` server response and alter it so it can be re-used
     /// as a response to a later, identical DNS question.
-    /// In order to do so, we need to make sure the DNS answer TTL values are decreased accordingly and the
-    /// header request id has to be overwriten by the new DNS question's request id.
+    /// In order to do so, we need to make sure the TTL values for all response resource records are decreased
+    /// accordingly and the header request id has to be overwriten by the new DNS question's request id.
     pub fn update_cached_packet(
         mut self,
         ttl_reduction: Duration,
@@ -277,17 +302,19 @@ impl<'a> DnsParser<'a> {
 
         self.parse()?;
 
-        dbg!("[Cache] Reducing ttl by {}s", seconds);
+        // dbg!("[Cache] Reducing ttl by {}s", seconds);
 
-        // Update the TTL values
+        // Update the TTL values by iterating through all recorded TTL value indices in the raw DNS packet buffer
+        // and reduce the TTL by `ttl_reduction`.
+        // This affects DNS resource record answers, authorities and additionals
+        // dbg!("[Cache] TTL indices {:?}", &self.answer_ttl_indices);
         for &start_index in &self.answer_ttl_indices {
             let old_ttl = buf_copy[start_index..start_index + 4].collate() as u32;
-            let new_ttl = old_ttl - seconds;
+            // dbg!("[Cache] old TTL {}s at index {:?}", old_ttl, start_index);
+            let new_ttl = old_ttl.saturating_sub(seconds);
             buf_copy[start_index..start_index + 4]
                 .copy_from_slice(new_ttl.to_be_bytes().as_slice());
         }
-
-        // TODO: update authority section TTL values
 
         // Update the request id to match
         buf_copy[0..2].copy_from_slice(new_request_id.to_be_bytes().as_slice());
@@ -300,7 +327,12 @@ impl<'a> DnsParser<'a> {
 pub struct DnsPacket {
     pub header: Header,
     pub question: Question,
-    pub answers: Vec<Answer>,
+    /// The list of resource records that describe the upstream DNS answers.
+    pub answers: Vec<ResourceRecord>,
+    /// The list of resource records that describe nameserver authorities.
+    pub authorities: Vec<ResourceRecord>,
+    /// The list of resource records that upstream sent as additional data.
+    pub additional: Vec<ResourceRecord>,
 }
 
 // TODO: Compared to the actual domain name encoding schema, this is very inefficient and might break

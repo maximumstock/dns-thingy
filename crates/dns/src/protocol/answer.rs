@@ -3,28 +3,28 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use super::record_type::RecordType;
 
 #[derive(Debug, Clone)]
-pub struct AnswerMeta {
+pub struct ResourceRecordMeta {
     pub name: String,
-    pub r#type: RecordType,
+    pub record_type: RecordType,
     pub class: u16,
     pub ttl: u32,
     pub len: u16,
 }
 
 #[derive(Debug, Clone)]
-pub struct Answer {
-    pub meta: AnswerMeta,
-    pub value: AnswerValue,
+pub struct ResourceRecord {
+    pub meta: ResourceRecordMeta,
+    pub value: ResourceRecordData,
 }
 
-impl Answer {
-    pub fn new(meta: AnswerMeta, value: AnswerValue) -> Self {
+impl ResourceRecord {
+    pub fn new(meta: ResourceRecordMeta, value: ResourceRecordData) -> Self {
         Self { meta, value }
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum AnswerValue {
+pub enum ResourceRecordData {
     A {
         ipv4: Ipv4Addr,
     },
@@ -56,4 +56,7 @@ pub enum AnswerValue {
         expire: u32,
         minimum: u32,
     },
+    /// Marks the RR data for a record type for which we haven't implemented the parsing step yet.
+    /// We can afford this since we often don't care about RR data and only about the RR metadata.
+    Unknown,
 }

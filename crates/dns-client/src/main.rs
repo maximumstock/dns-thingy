@@ -1,4 +1,4 @@
-use dns::protocol::answer::AnswerValue;
+use dns::protocol::answer::ResourceRecordData;
 
 fn main() {
     let mut args = std::env::args();
@@ -14,17 +14,17 @@ fn main() {
     for answer in answers {
         let meta = &answer.meta;
         match answer.value {
-            AnswerValue::A { ipv4 } => println!("A\t{meta:?} - {ipv4}"),
-            AnswerValue::CNAME { cname } => println!("CNAME\t{meta:?} - {cname}"),
-            AnswerValue::AAAA { ipv6 } => println!("CNAME\t{meta:?} - {ipv6}"),
-            AnswerValue::NS { ns } => println!("CNAME\t{meta:?} - {ns}"),
-            AnswerValue::MB { domain_name } => println!("CNAME\t{meta:?} - {domain_name}"),
-            AnswerValue::MX {
+            ResourceRecordData::A { ipv4 } => println!("A\t{meta:?} - {ipv4}"),
+            ResourceRecordData::CNAME { cname } => println!("CNAME\t{meta:?} - {cname}"),
+            ResourceRecordData::AAAA { ipv6 } => println!("CNAME\t{meta:?} - {ipv6}"),
+            ResourceRecordData::NS { ns } => println!("CNAME\t{meta:?} - {ns}"),
+            ResourceRecordData::MB { domain_name } => println!("CNAME\t{meta:?} - {domain_name}"),
+            ResourceRecordData::MX {
                 preference,
                 exchange,
             } => println!("CNAME\t{meta:?} - {exchange} ({preference})"),
-            AnswerValue::PTR { domain_name } => println!("CNAME\t{meta:?} - {domain_name}"),
-            AnswerValue::SOA {
+            ResourceRecordData::PTR { domain_name } => println!("CNAME\t{meta:?} - {domain_name}"),
+            ResourceRecordData::SOA {
                 mname,
                 rname,
                 serial: _,
@@ -33,6 +33,9 @@ fn main() {
                 expire: _,
                 minimum: _,
             } => println!("CNAME\t{meta:?} - {mname} - {rname}"),
+            ResourceRecordData::Unknown => {
+                println!("Unknown record type {:?}", meta.record_type)
+            }
         }
     }
 }

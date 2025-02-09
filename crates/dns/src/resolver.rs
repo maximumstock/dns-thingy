@@ -2,7 +2,7 @@ use std::{net::UdpSocket, time::Duration};
 
 use crate::{
     parser::{encode_domain_name, DnsPacketBuffer, DnsParser},
-    protocol::answer::Answer,
+    protocol::answer::ResourceRecord,
     serialize::generate_nx_response,
 };
 
@@ -12,7 +12,7 @@ pub fn resolve_domain(
     dns: &str,
     id: Option<u16>,
     socket: Option<UdpSocket>,
-) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<ResourceRecord>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let socket = socket.unwrap_or_else(|| UdpSocket::bind(("0.0.0.0", 0)).unwrap());
 
     let request = generate_request(domain, id);
@@ -37,7 +37,7 @@ async fn resolve_domain_async(
     dns: &str,
     id: Option<u16>,
     socket: &tokio::net::UdpSocket,
-) -> Result<(Vec<Answer>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<ResourceRecord>, [u8; 512]), Box<dyn std::error::Error + Send + Sync>> {
     let request = generate_request(domain, id);
     if let Err(e) = socket.send_to(&request, dns).await {
         println!("Failed to send request for {domain} to {dns:?}: {e:?}");
@@ -78,7 +78,7 @@ pub async fn relay_query_async(
 pub async fn stub_response_with_delay(
     id: Option<u16>,
     delay: Duration,
-) -> Result<(Vec<Answer>, DnsPacketBuffer), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<(Vec<ResourceRecord>, DnsPacketBuffer), Box<dyn std::error::Error + Send + Sync>> {
     let response = generate_nx_response(id.unwrap_or(1337)).unwrap();
     tokio::time::sleep(delay).await;
     // Still parse answers, to keep the same API as the actual resolve function
@@ -113,7 +113,7 @@ pub(crate) fn generate_request(domain: &str, id: Option<u16>) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{protocol::answer::AnswerValue, resolver::resolve_domain};
+    use crate::{protocol::answer::ResourceRecordData, resolver::resolve_domain};
 
     const DNS_SERVERS: [&str; 1] = ["1.1.1.1:53"];
 
@@ -123,7 +123,7 @@ mod tests {
             let (answers, _) = resolve_domain("www.example.com", dns_root, None, None).unwrap();
             assert!(matches!(
                 answers.last().unwrap().value,
-                AnswerValue::A { ipv4: _ }
+                ResourceRecordData::A { ipv4: _ }
             ));
         }
     }
