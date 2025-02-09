@@ -23,12 +23,16 @@ on port `53000` as well. Optionally, use `-p 53:53000` to map your local port `5
 
 At that point `dns-block-tokio` can answer DNS queries, ie. `dig google.com @127.0.0.1 @53000`.
 
+### Caching
+
+You can optionally enable caching by passing `--caching-enabled` when running `dns-block-tokio`.
+This will cache the DNS responses from your configured upstream relay based on the lowest time-to-live
+values across all resource records in the DNS reponse.
+
 ## TODO
 
-- [ ] optional caching
 - [ ] feat: add custom blocking rules
-- [ ] feat: cache records according to answer TTL
-- [ ] feat: implement more record types
+- [ ] feat: add custom DNS rewrite rules
 - [ ] api: request builder for DNS queries & responses
 - [ ] bench
   - every commit on `master` should trigger a benchmark suite that collects the typical benchmark data, posts the data to the repository/GH Pages and builds a website with the results in a graph
