@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use dns::parse::parser::DnsParser;
+use dns::parser::DnsParser;
 
 fn dns_parser(c: &mut Criterion) {
     let dns_queries: Vec<_> = (include_bytes!("./inputs/1000.bin").chunks(512))
