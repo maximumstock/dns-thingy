@@ -6,7 +6,12 @@ mod resolution;
 use cache::{CacheKey, RequestCache};
 use cli::ServerArgs;
 use resolution::{handle_benchmark, handle_filter, RequestAssociationMap, RequestKey};
-use std::{collections::HashMap, net::SocketAddr, sync::Arc, thread::available_parallelism};
+use std::{
+    collections::{BTreeSet, HashMap},
+    net::SocketAddr,
+    sync::Arc,
+    thread::available_parallelism,
+};
 use tokio::{net::UdpSocket, sync::RwLock, time::Instant};
 
 use dns::{
@@ -43,6 +48,9 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
     let upstream_socket = Arc::new(tokio::net::UdpSocket::bind(("0.0.0.0", 0)).await.unwrap());
     let request_associations = Arc::new(RwLock::new(HashMap::new()));
     let request_cache = Arc::new(RwLock::new(RequestCache::new()));
+    let blocked_domains = Arc::new(BTreeSet::from_iter(
+        server_args.blocked_domains.clone().into_iter(),
+    ));
 
     let mut handles = vec![];
     for _ in 0..num_acceptor_tasks {
@@ -51,6 +59,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
         let upstream_socket = Arc::clone(&upstream_socket);
         let request_associations = Arc::clone(&request_associations);
         let request_cache = Arc::clone(&request_cache);
+        let blocked_domains = Arc::clone(&blocked_domains);
 
         let handle = tokio::spawn(async move {
             loop {
@@ -59,6 +68,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
                 let upstream_socket = Arc::clone(&upstream_socket);
                 let request_associations = Arc::clone(&request_associations);
                 let request_cache = Arc::clone(&request_cache);
+                let blocked_domains = Arc::clone(&blocked_domains);
 
                 let mut buffer = [0u8; 512];
                 let (_, sender) = socket.recv_from(&mut buffer).await.unwrap();
@@ -72,6 +82,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
                         &server_args,
                         request_associations,
                         request_cache,
+                        blocked_domains,
                     )
                     .await;
                 });
@@ -99,6 +110,7 @@ async fn process(
     server_args: &ServerArgs,
     request_associations: Arc<RwLock<RequestAssociationMap>>,
     request_cache: Arc<RwLock<RequestCache>>,
+    blocked_domains: Arc<BTreeSet<String>>,
 ) {
     let mut parser = DnsParser::new(client_packet);
     let request_packet = parser.parse().unwrap();
@@ -111,7 +123,7 @@ async fn process(
             std::time::Duration::from_millis(server_args.resolution_delay_ms),
         )
         .await;
-    } else if is_domain_blacklisted(&request_packet.question.domain_name) {
+    } else if is_domain_blacklisted(&blocked_domains, &request_packet.question.domain_name) {
         handle_filter(server_args, &request_packet, receiving_socket, sender).await;
     } else {
         let start = Instant::now();

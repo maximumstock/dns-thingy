@@ -1,8 +1,8 @@
 use std::{collections::HashMap, net::SocketAddr};
 
 use dns::{
-    parser::DnsPacket, protocol::record_type::RecordType, resolver::stub_response_with_delay,
-    serialize::generate_nx_response,
+    filter::is_domain_blacklisted, parser::DnsPacket, protocol::record_type::RecordType,
+    resolver::stub_response_with_delay, serialize::generate_nx_response,
 };
 use tokio::time::Instant;
 

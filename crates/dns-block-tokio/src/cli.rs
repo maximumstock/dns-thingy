@@ -1,4 +1,6 @@
-use clap::Parser;
+use std::collections::{BTreeSet, HashSet};
+
+use clap::{ArgAction, Parser};
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -17,7 +19,7 @@ pub struct ServerArgs {
     pub bind_port: u16,
 
     /// Whether benchmark mode is enabled, ie. if forwarding should be skipped and to avoid network calls upstream
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     pub benchmark: bool,
 
     /// Milliseconds of resolution delay of DNS queries when `benchmarking = true`
@@ -35,6 +37,10 @@ pub struct ServerArgs {
     /// Enables DNS reply caching
     #[arg(short, long, default_value_t = false)]
     pub caching_enabled: bool,
+
+    /// List of domains to block
+    #[arg(short, long, action=ArgAction::Append)]
+    pub blocked_domains: Vec<String>,
 }
 
 impl ServerArgs {
