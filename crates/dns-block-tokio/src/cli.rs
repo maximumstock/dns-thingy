@@ -36,8 +36,8 @@ pub struct ServerArgs {
     #[arg(short, long, default_value_t = false)]
     pub caching_enabled: bool,
 
-    /// List of domains to block
-    #[arg(short, long, action=ArgAction::Append)]
+    /// Domains to block from being resolved
+    #[arg(long, value_parser, use_value_delimiter = true)]
     pub blocked_domains: Vec<String>,
 }
 
