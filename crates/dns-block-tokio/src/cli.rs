@@ -1,4 +1,4 @@
-use clap::{ArgAction, Parser};
+use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -39,6 +39,10 @@ pub struct ServerArgs {
     /// Domains to block from being resolved
     #[arg(long, value_parser, use_value_delimiter = true)]
     pub blocked_domains: Vec<String>,
+
+    /// Source URLs for domain lists to block from being resolved
+    #[arg(long, value_parser, use_value_delimiter = true)]
+    pub domain_blacklists: Vec<String>,
 }
 
 impl ServerArgs {
