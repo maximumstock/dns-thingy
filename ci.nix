@@ -4,7 +4,7 @@ pkgs.mkShell rec {
     openssl
     pkg-config
 
-    (rust-bin.stable.latest.default.override {
+    (rust-bin.beta.latest.default.override {
       extensions = [ "rust-src" "clippy" ];
     })
     (import ./dnspyre.nix { inherit pkgs; })
