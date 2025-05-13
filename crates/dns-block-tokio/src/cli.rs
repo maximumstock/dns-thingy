@@ -17,7 +17,7 @@ pub struct ServerArgs {
     pub bind_port: u16,
 
     /// Whether benchmark mode is enabled, ie. if forwarding should be skipped and to avoid network calls upstream
-    #[arg(short, long, default_value_t = false)]
+    #[arg(long, default_value_t = false)]
     pub benchmark: bool,
 
     /// Milliseconds of resolution delay of DNS queries when `benchmarking = true`
@@ -35,6 +35,14 @@ pub struct ServerArgs {
     /// Enables DNS reply caching
     #[arg(short, long, default_value_t = false)]
     pub caching_enabled: bool,
+
+    /// Domains to block from being resolved
+    #[arg(long, value_parser, use_value_delimiter = true)]
+    pub blocked_domains: Vec<String>,
+
+    /// Source URLs for domain lists to block from being resolved
+    #[arg(long, value_parser, use_value_delimiter = true)]
+    pub domain_blacklists: Vec<String>,
 }
 
 impl ServerArgs {
