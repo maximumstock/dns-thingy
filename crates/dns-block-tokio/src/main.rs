@@ -81,7 +81,7 @@ async fn resolve_external_blocked_domains(domain_blacklist_uris: &[String]) -> V
 
     let successful_response_bodies = stream::iter(valid_uris)
         .map(|uri| reqwest::get(uri.to_string()))
-        .filter_map(async move |res| {
+        .filter_map(|res| async move {
             let res = res.await;
 
             match res {
