@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.5.38", features = ["derive"] }
 dns = { path = "../dns" }
-tokio = { version = "1.45.0", features = ["full"] }
+tokio = { version = "1.45.1", features = ["full"] }
