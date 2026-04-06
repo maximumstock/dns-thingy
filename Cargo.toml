@@ -1,3 +1,4 @@
 [workspace]
 
 members = ["crates/dns", "crates/dns-client", "crates/dns-block-tokio"]
+resolver = "3"

@@ -1,4 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{Criterion, criterion_group, criterion_main};
 use dns::parser::DnsParser;
 
 fn dns_parser(c: &mut Criterion) {

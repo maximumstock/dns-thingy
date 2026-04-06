@@ -1,3 +1,7 @@
+build:
+	cargo build --all-features --all-targets
+test:
+	cargo test --all-features --all-targets -- --nocapture
 build-release:
 	cargo build --release
 benchmark-fishtank:
@@ -12,8 +16,6 @@ tidy:
 	cargo fmt && cargo clippy -- -D warnings
 build-docker:
 	docker buildx build --no-cache -f Dockerfile -t dns-thingy:latest .
-test:
-	cargo test --all-features --all-targets -- --nocapture
 dev:
 	RUST_BACKTRACE=1 cargo watch -w crates -x "run --bin dns-block-tokio -- --caching-enabled"
 deploy-nixpi:

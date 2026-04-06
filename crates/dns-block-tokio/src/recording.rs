@@ -18,7 +18,7 @@ async fn _setup_query_recorder(file_path: &Option<String>) -> Arc<Option<RwLock<
     }
 
     Arc::new({
-        if let Some(ref path) = file_path {
+        if let Some(path) = file_path {
             let filename = format!(
                 "{}.bin",
                 std::time::SystemTime::now()
