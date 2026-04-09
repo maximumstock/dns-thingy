@@ -7,7 +7,7 @@ edition = "2024"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "1.51.0", features = ["full"] }
+tokio = { version = "1.51.1", features = ["full"] }
 
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports"] }
