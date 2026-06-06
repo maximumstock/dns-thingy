@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::protocol::{
     answer::{ResourceRecord, ResourceRecordData, ResourceRecordMeta},
     header::{Flags, Header},
+    packet::DnsPacket,
     question::Question,
     record_type::RecordType,
 };
@@ -323,18 +324,6 @@ impl<'a> DnsParser<'a> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct DnsPacket {
-    pub header: Header,
-    pub question: Question,
-    /// The list of resource records that describe the upstream DNS answers.
-    pub answers: Vec<ResourceRecord>,
-    /// The list of resource records that describe nameserver authorities.
-    pub authorities: Vec<ResourceRecord>,
-    /// The list of resource records that upstream sent as additional data.
-    pub additional: Vec<ResourceRecord>,
-}
-
 // TODO: Compared to the actual domain name encoding schema, this is very inefficient and might break
 // with many long record names, since we don't reduce subdomains. Either we need that or we
 // should just never encode this ourselves and skip serialization altogether, since we only need
@@ -353,7 +342,7 @@ pub(crate) fn encode_domain_name(domain_name: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        parser::{encode_domain_name, Collate, DnsParser},
+        parser::{Collate, DnsParser, encode_domain_name},
         protocol::header::{Flags, Header},
     };
 

@@ -1,13 +1,14 @@
 use std::{
     collections::{
-        hash_map::Entry::{Occupied, Vacant},
         HashMap,
+        hash_map::Entry::{Occupied, Vacant},
     },
     time::{Duration, Instant},
 };
 
 use dns::{
-    parser::{DnsPacket, DnsPacketBuffer, DnsParser},
+    parser::{DnsPacketBuffer, DnsParser},
+    protocol::packet::DnsPacket,
     protocol::record_type::RecordType,
 };
 

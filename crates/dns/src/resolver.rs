@@ -1,7 +1,7 @@
 use std::{net::UdpSocket, time::Duration};
 
 use crate::{
-    parser::{encode_domain_name, DnsPacketBuffer, DnsParser},
+    parser::{DnsPacketBuffer, DnsParser, encode_domain_name},
     protocol::answer::ResourceRecord,
     serialize::generate_nx_response,
 };

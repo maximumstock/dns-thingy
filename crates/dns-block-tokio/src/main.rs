@@ -5,7 +5,7 @@ mod resolution;
 
 use cache::{CacheKey, RequestCache};
 use cli::ServerArgs;
-use resolution::{handle_benchmark, handle_filter, RequestAssociationMap, RequestKey};
+use resolution::{RequestAssociationMap, RequestKey, handle_benchmark, handle_filter};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, thread::available_parallelism};
 use tokio::{net::UdpSocket, sync::RwLock, time::Instant};
 
