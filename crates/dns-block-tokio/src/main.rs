@@ -44,7 +44,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
     let request_associations = Arc::new(RwLock::new(HashMap::new()));
     let request_cache = Arc::new(RwLock::new(RequestCache::new()));
 
-    let mut handles = vec![];
+    let mut acceptor_task_handles = vec![];
     for _ in 0..num_acceptor_tasks {
         let server_args = Arc::clone(&server_args);
         let socket = Arc::clone(&socket);
@@ -52,7 +52,7 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
         let request_associations = Arc::clone(&request_associations);
         let request_cache = Arc::clone(&request_cache);
 
-        let handle = tokio::spawn(async move {
+        let acceptor_handle = tokio::spawn(async move {
             loop {
                 let server_args = Arc::clone(&server_args);
                 let socket = Arc::clone(&socket);
@@ -77,11 +77,17 @@ async fn start_server_with_acceptors(server_args: ServerArgs, num_acceptor_tasks
                 });
             }
         });
-        handles.push(handle);
+        acceptor_task_handles.push(acceptor_handle);
     }
 
-    for handle in handles {
-        handle.await.unwrap();
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Failed to wait for Ctrl-C");
+
+    println!("Shutting down gracefully...");
+
+    for handle in acceptor_task_handles {
+        handle.abort();
     }
 }
 
