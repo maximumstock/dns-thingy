@@ -8,7 +8,6 @@ use tokio::sync::RwLock;
 
 /// For debugging purposes or generating DNS request datasets, it might be interesting to record the handled DNS queries.
 /// This module holds some functions that help with setting that up.
-
 /// Sets up a file at the given path and returns a `tokio::fs::File` handle
 async fn _setup_query_recorder(file_path: &Option<String>) -> Arc<Option<RwLock<tokio::fs::File>>> {
     // which writes out the data

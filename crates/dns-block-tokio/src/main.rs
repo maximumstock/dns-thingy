@@ -123,27 +123,26 @@ async fn process(
         let start = Instant::now();
 
         let cache_key = CacheKey::from_packet(&request_packet);
-        if server_args.caching_enabled {
-            if let Some(dns_reply) = request_cache
+        if server_args.caching_enabled
+            && let Some(dns_reply) = request_cache
                 .write()
                 .await
                 .get(cache_key.clone(), request_packet.header.request_id)
-            {
-                receiving_socket.send_to(&dns_reply, sender).await.unwrap();
+        {
+            receiving_socket.send_to(&dns_reply, sender).await.unwrap();
 
-                // todo: record cache hit
+            // todo: record cache hit
 
-                if !server_args.quiet {
-                    println!(
-                        "[Cache Hit] Handled {:?} query for {} [{}ms]",
-                        &request_packet.question.r#type,
-                        &request_packet.question.domain_name,
-                        start.elapsed().as_millis()
-                    );
-                }
-
-                return;
+            if !server_args.quiet {
+                println!(
+                    "[Cache Hit] Handled {:?} query for {} [{}ms]",
+                    &request_packet.question.r#type,
+                    &request_packet.question.domain_name,
+                    start.elapsed().as_millis()
+                );
             }
+
+            return;
         }
 
         // Create a unqiue key that identifies the query, store it in a shared hashmap and
