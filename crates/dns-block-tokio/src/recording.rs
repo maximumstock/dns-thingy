@@ -1,3 +1,6 @@
+// For debugging purposes or generating DNS request datasets, it might be interesting to record the handled DNS queries.
+// This module holds some functions that help with setting that up.
+
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
