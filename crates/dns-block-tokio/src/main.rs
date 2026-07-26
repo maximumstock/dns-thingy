@@ -1,5 +1,6 @@
 mod cache;
 mod cli;
+mod domain_rewrite;
 mod recording;
 mod resolution;
 

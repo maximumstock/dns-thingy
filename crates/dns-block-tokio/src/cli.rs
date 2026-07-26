@@ -1,6 +1,6 @@
-use std::str::FromStr;
-
 use clap::Parser;
+
+use crate::domain_rewrite::DomainRewrite;
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -56,67 +56,5 @@ pub(crate) struct ServerArgs {
 impl ServerArgs {
     pub fn from_env() -> Self {
         Self::parse()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct DomainRewrite {
-    ip: std::net::Ipv4Addr,
-    domain: String,
-}
-
-impl FromStr for DomainRewrite {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !s.contains(":") {
-            return Err("domain rewrite format is <domain>:<ip>".to_string());
-        }
-
-        let (domain, raw_ip) = s.split_once(":").unwrap();
-
-        if domain.is_empty() {
-            return Err("domain rewrite domain is missing".to_string());
-        }
-
-        println!("raw ip {raw_ip}");
-
-        let ip = std::net::Ipv4Addr::from_str(raw_ip)
-            .map_err(|_| format!("IP address '{raw_ip}' is not a valid IPv4 address"))?;
-
-        Ok(DomainRewrite {
-            ip,
-            domain: domain.to_string(),
-        })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use std::{net::Ipv4Addr, str::FromStr};
-
-    use crate::cli::DomainRewrite;
-
-    #[test]
-    fn test_domain_rewrite_parse() {
-        assert_eq!(
-            DomainRewrite::from_str("google.com"),
-            Err("domain rewrite format is <domain>:<ip>".to_string())
-        );
-        assert_eq!(
-            DomainRewrite::from_str("google.com8.8.8.8"),
-            Err("domain rewrite format is <domain>:<ip>".to_string())
-        );
-        assert_eq!(
-            DomainRewrite::from_str("google.com:8.8.8"),
-            Err("IP address '8.8.8' is not a valid IPv4 address".to_string())
-        );
-        assert_eq!(
-            DomainRewrite::from_str("google:8.8.8.8"),
-            Ok(DomainRewrite {
-                ip: Ipv4Addr::from_str("8.8.8.8").unwrap(),
-                domain: "google".to_string()
-            })
-        );
     }
 }
