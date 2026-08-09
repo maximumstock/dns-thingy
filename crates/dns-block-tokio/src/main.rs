@@ -9,7 +9,7 @@ use futures::stream::{self, StreamExt};
 use http::{HeaderValue, Uri};
 use resolution::Resolver;
 use std::{sync::Arc, thread::available_parallelism};
-use tokio::task::JoinHandle;
+use tokio::{signal, task::JoinHandle};
 
 use dns::parser::DnsPacketBuffer;
 
@@ -69,6 +69,11 @@ async fn start_server_with_acceptors(mut server_args: ServerArgs, num_acceptor_t
             })
         })
         .collect();
+
+    match signal::ctrl_c().await {
+        Ok(_) => println!("Received SIGINT, shutting down gracefully..."),
+        Err(e) => eprintln!("Error when handling SIGINT {e}"),
+    };
 
     for handle in acceptor_task_handles {
         handle.abort();
