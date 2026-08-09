@@ -1,32 +1,40 @@
 { pkgs }:
 
 pkgs.mkShell rec {
-  buildInputs = with pkgs; [
-    # DNS debugging
-    dig
-    xxd
-    delta
+  buildInputs =
+    with pkgs;
+    [
+      # DNS debugging
+      dig
+      xxd
+      delta
 
-    # Compiler Chain
-    mold
-    clang
-    pkg-config
-    (rust-bin.beta.latest.default.override {
-      extensions = [ "rust-src" "clippy" ];
-    })
+      # Compiler Chain
+      mold
+      clang
+      pkg-config
+      (rust-bin.beta.latest.default.override {
+        extensions = [
+          "rust-src"
+          "clippy"
+        ];
+      })
 
-    # Dev Tooling
-    rust-analyzer
-    cargo-edit
-    cargo-feature
-    cargo-udeps
-    cargo-bloat
+      # Dev Tooling
+      rust-analyzer
+      cargo-edit
+      cargo-feature
+      cargo-udeps
+      cargo-bloat
 
-    # DNS Benchmarking
-    (import ./dnspyre.nix { inherit pkgs; })
-    graph-cli
-  ];
+      # DNS Benchmarking
 
+      graph-cli
+    ]
+    ++ (pkgs.lib.optionals pkgs.stdenv.isLinux [
+      linuxPackages.perf
+      (import ./dnspyre.nix { inherit pkgs; }) # uses Linux specific recvmsg syscall
+    ]);
 
   RUST_BACKTRACE = 1;
   MOLD_PATH = "${pkgs.mold.out}/bin/mold";
