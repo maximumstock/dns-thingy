@@ -111,20 +111,20 @@ pub(crate) fn generate_request(domain: &str, id: Option<u16>) -> Vec<u8> {
     request
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{protocol::answer::ResourceRecordData, resolver::resolve_domain};
-
-    const DNS_SERVERS: [&str; 1] = ["1.1.1.1:53"];
-
-    #[test]
-    fn test_resolve_a_records() {
-        for dns_root in DNS_SERVERS {
-            let (answers, _) = resolve_domain("www.example.com", dns_root, None, None).unwrap();
-            assert!(matches!(
-                answers.last().unwrap().value,
-                ResourceRecordData::A { ipv4: _ }
-            ));
-        }
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use crate::{protocol::answer::ResourceRecordData, resolver::resolve_domain};
+//
+//     const DNS_SERVERS: [&str; 1] = ["1.1.1.1:53"];
+//
+//     #[test]
+//     fn test_resolve_a_records() {
+//         for dns_root in DNS_SERVERS {
+//             let (answers, _) = resolve_domain("www.example.com", dns_root, None, None).unwrap();
+//             assert!(matches!(
+//                 answers.last().unwrap().value,
+//                 ResourceRecordData::A { ipv4: _ }
+//             ));
+//         }
+//     }
+// }

@@ -10,8 +10,8 @@ pkgs.mkShell rec {
       delta
 
       # Compiler Chain
-      mold
-      clang
+      # mold
+      # clang
       pkg-config
       (rust-bin.beta.latest.default.override {
         extensions = [
@@ -37,7 +37,7 @@ pkgs.mkShell rec {
     ]);
 
   RUST_BACKTRACE = 1;
-  MOLD_PATH = "${pkgs.mold.out}/bin/mold";
-  RUSTFLAGS = "-Clink-arg=-fuse-ld=${MOLD_PATH} -Clinker=clang";
+  # MOLD_PATH = "${pkgs.mold.out}/bin/mold";
+  # RUSTFLAGS = "-Clink-arg=-fuse-ld=${MOLD_PATH} -Clinker=clang";
   LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
 }
