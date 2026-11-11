@@ -58,10 +58,10 @@ Options:
       --domain-blacklists <DOMAIN_BLACKLISTS>
           Source URLs for domain lists to block from being resolved
 
-      --domain-rewrites <DOMAIN_REWRITES>
-          Comma-separated tuples of `<domain>:<ip>` that describe how to resolve a domain to a static IP.
+      --rewrite-a <REWRITE_A>
+          A `<domain>:<ip>` tuple that describes how to resolve a domain to a static IPv4 address. Can be passed multiple times, e.g. `--rewrite-a a.com:1.2.3.4 --rewrite-a b.com:5.6.7.8`.
 
-          The IPs can only be in IPv4 format as of now. The domains are not validated.
+          Rewritten replies use a TTL of 60 seconds. The IPs can only be in IPv4 format as of now. The domains are not validated. Only `A` records are supported as of now.
 
   -q, --quiet
           Whether to disable logging
@@ -91,14 +91,14 @@ Options:
 
 Rewriting or blocking domains can happen in a couple different ways. A request for a blocked domain will be answered with a `NXDOMAIN` DNS response.
 
-1. You can rewrite single domains to hard-coded IPv4 addressses
+1. You can rewrite single domains to hard-coded IPv4 addressses. Only `A` records can be rewritten as of now; queries for other record types of a rewritten domain are not overwritten and get forwarded upstream.
 2. You can hard-code blocked domains
 3. You can pass an URL that resolves to a `text/plain` HTTP resource, similar to popular DNS blocklists online. Each listed domain name will be blocked.
 
 ```bash
 dns-block-tokio \
-  --domain-rewrites google.com:8.8.8.8 \
-  --domain-rewrites google.de:1.1.1.1 \
+  --rewrite-a google.com:8.8.8.8 \
+  --rewrite-a google.de:1.1.1.1 \
   --domain-blacklists https://raw.githubusercontent.com/hagezi/dns-blocklists/blob/main/share/ad-shield.txt \
   --domain-blacklists https://raw.githubusercontent.com/hagezi/dns-blocklists/blob/main/share/ad-shield-subdomains.txt \
   --blocked-domains example.com
