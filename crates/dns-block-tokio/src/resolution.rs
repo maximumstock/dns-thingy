@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeSet, HashMap},
-    net::SocketAddr,
+    net::{Ipv4Addr, SocketAddr},
     sync::Arc,
 };
 
@@ -8,7 +8,7 @@ use dns::{
     parser::{DnsPacketBuffer, DnsParser},
     protocol::{packet::DnsPacket, record_type::RecordType},
     resolver::{relay_query_async, stub_response_with_delay},
-    serialize::generate_nx_response,
+    serialize::{generate_a_response, generate_nx_response},
 };
 use tokio::{net::UdpSocket, sync::RwLock, time::Instant};
 
@@ -17,11 +17,15 @@ use crate::{
     cli::ServerArgs,
 };
 
+/// TTL in seconds for locally generated replies to rewritten domains
+const REWRITE_TTL_SECONDS: u32 = 60;
+
 pub struct Resolver {
     pub(crate) server_args: ServerArgs,
     pub(crate) request_associations: Arc<RwLock<RequestAssociationMap>>,
     pub(crate) request_cache: Arc<RwLock<RequestCache>>,
     pub(crate) blocked_domains: Arc<BTreeSet<String>>,
+    pub(crate) domain_rewrites: Arc<HashMap<String, Ipv4Addr>>,
     pub(crate) client_socket: UdpSocket,
     pub(crate) upstream_socket: UdpSocket,
 }
@@ -36,6 +40,13 @@ impl Resolver {
             request_associations: Default::default(),
             request_cache: Arc::new(RwLock::new(RequestCache::new())),
             blocked_domains: Arc::new(BTreeSet::from_iter(server_args.blocked_domains.clone())),
+            domain_rewrites: Arc::new(
+                server_args
+                    .rewrite_a
+                    .iter()
+                    .map(|rewrite| (rewrite.domain.clone(), rewrite.ip))
+                    .collect(),
+            ),
             server_args,
             client_socket,
             upstream_socket,
@@ -52,6 +63,19 @@ impl Resolver {
                 &self.client_socket,
                 sender,
                 std::time::Duration::from_millis(self.server_args.resolution_delay_ms),
+            )
+            .await;
+        } else if request_packet.question.r#type == RecordType::A
+            && let Some(ip) = self
+                .domain_rewrites
+                .get(&request_packet.question.domain_name)
+        {
+            handle_rewrite(
+                &self.server_args,
+                &request_packet,
+                *ip,
+                &self.client_socket,
+                sender,
             )
             .await;
         } else if self
@@ -215,6 +239,29 @@ pub async fn handle_filter(
     }
     let nx_response = generate_nx_response(request_packet.header.request_id).unwrap();
     socket.send_to(&nx_response, sender).await.unwrap();
+}
+
+pub async fn handle_rewrite(
+    server_args: &ServerArgs,
+    request_packet: &DnsPacket,
+    ip: Ipv4Addr,
+    socket: &tokio::net::UdpSocket,
+    sender: &std::net::SocketAddr,
+) {
+    if !server_args.quiet {
+        println!(
+            "Rewriting request for {:?} to {}",
+            request_packet.question.domain_name, ip
+        );
+    }
+    let reply = generate_a_response(
+        request_packet.header.request_id,
+        &request_packet.question.domain_name,
+        ip,
+        REWRITE_TTL_SECONDS,
+    )
+    .unwrap();
+    socket.send_to(&reply, sender).await.unwrap();
 }
 
 pub async fn handle_benchmark(

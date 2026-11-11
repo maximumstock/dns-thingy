@@ -2,8 +2,8 @@ use std::{error::Error, fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct DomainRewrite {
-    ip: std::net::Ipv4Addr,
-    domain: String,
+    pub(crate) ip: std::net::Ipv4Addr,
+    pub(crate) domain: String,
 }
 
 #[derive(Debug, PartialEq)]

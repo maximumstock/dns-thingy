@@ -25,12 +25,14 @@ pub(crate) struct ServerArgs {
     #[arg(long, value_parser, use_value_delimiter = true)]
     pub domain_blacklists: Vec<String>,
 
-    /// Comma-separated tuples of `<domain>:<ip>` that describe how to resolve
-    /// a domain to a static IP.
+    /// A `<domain>:<ip>` tuple that describes how to resolve a domain to a static IPv4 address.
+    /// Can be passed multiple times, e.g. `--rewrite-a a.com:1.2.3.4 --rewrite-a b.com:5.6.7.8`.
     ///
-    /// The IPs can only be in IPv4 format as of now. The domains are not validated.
+    /// Rewritten replies use a TTL of 60 seconds.
+    /// The domains are not validated.
+    /// Only `A` records can be rewritten as of now.
     #[arg(long, value_parser = clap::value_parser!(DomainRewrite))]
-    pub domain_rewrites: Vec<DomainRewrite>,
+    pub rewrite_a: Vec<DomainRewrite>,
 
     /// Whether to disable logging
     #[arg(short, long, default_value_t = false)]
