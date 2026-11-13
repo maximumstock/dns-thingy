@@ -380,7 +380,6 @@ name = "dns"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "serde",
  "tokio",
 ]
 
