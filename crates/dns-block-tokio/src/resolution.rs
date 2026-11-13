@@ -15,6 +15,7 @@ use tokio::{net::UdpSocket, sync::RwLock, time::Instant};
 use crate::{
     cache::{CacheKey, RequestCache},
     cli::ServerArgs,
+    domain_rewrite::DomainRewrites,
 };
 
 /// TTL in seconds for locally generated replies to rewritten domains
@@ -25,7 +26,7 @@ pub struct Resolver {
     pub(crate) request_associations: Arc<RwLock<RequestAssociationMap>>,
     pub(crate) request_cache: Arc<RwLock<RequestCache>>,
     pub(crate) blocked_domains: Arc<BTreeSet<String>>,
-    pub(crate) domain_rewrites: Arc<HashMap<String, Ipv4Addr>>,
+    pub(crate) domain_rewrites: Arc<DomainRewrites>,
     pub(crate) client_socket: UdpSocket,
     pub(crate) upstream_socket: UdpSocket,
 }
@@ -40,13 +41,7 @@ impl Resolver {
             request_associations: Default::default(),
             request_cache: Arc::new(RwLock::new(RequestCache::new())),
             blocked_domains: Arc::new(BTreeSet::from_iter(server_args.blocked_domains.clone())),
-            domain_rewrites: Arc::new(
-                server_args
-                    .rewrite_a
-                    .iter()
-                    .map(|rewrite| (rewrite.domain.clone(), rewrite.ip))
-                    .collect(),
-            ),
+            domain_rewrites: Arc::new(server_args.rewrite_a.iter().cloned().collect()),
             server_args,
             client_socket,
             upstream_socket,
@@ -68,12 +63,12 @@ impl Resolver {
         } else if request_packet.question.r#type == RecordType::A
             && let Some(ip) = self
                 .domain_rewrites
-                .get(&request_packet.question.domain_name)
+                .resolve(&request_packet.question.domain_name)
         {
             handle_rewrite(
                 &self.server_args,
                 &request_packet,
-                *ip,
+                ip,
                 &self.client_socket,
                 sender,
             )

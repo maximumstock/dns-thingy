@@ -28,6 +28,10 @@ pub(crate) struct ServerArgs {
     /// A `<domain>:<ip>` tuple that describes how to resolve a domain to a static IPv4 address.
     /// Can be passed multiple times, e.g. `--rewrite-a a.com:1.2.3.4 --rewrite-a b.com:5.6.7.8`.
     ///
+    /// The domain may be a wildcard like `*.a.com:1.2.3.4`, which matches subdomains at any depth
+    /// (`x.a.com`, `x.y.a.com`) but not `a.com` itself. Exact rules win over wildcards, and more
+    /// specific wildcards win over less specific ones.
+    ///
     /// Rewritten replies use a TTL of 60 seconds.
     /// The domains are not validated.
     /// Only `A` records can be rewritten as of now.
