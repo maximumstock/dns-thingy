@@ -17,7 +17,7 @@ tidy:
 build-docker:
 	docker buildx build --no-cache -f Dockerfile -t dns-thingy:latest .
 dev:
-	RUST_BACKTRACE=1 cargo watch -w crates -x "run --bin dns-block-tokio -- --caching-enabled"
+	RUST_BACKTRACE=1 cargo watch -w crates -x "run --bin dns-block-tokio"
 deploy-nixpi:
 	# Based on https://sebi.io/posts/2024-05-02-guide-cross-compiling-rust-from-macos-to-raspberry-pi-2024-apple-silicon/
 	cargo build --release -p dns-block-tokio --target=armv7-unknown-linux-musleabihf

@@ -58,7 +58,7 @@ async fn resolve_domain_async(
 /// pipes the response back to the originating socket.
 pub async fn relay_query_async(
     original_query: &DnsPacketBuffer,
-    upstream_dns: &str,
+    upstream_dns: std::net::SocketAddr,
     socket: &tokio::net::UdpSocket,
 ) -> Result<DnsPacketBuffer, Box<dyn std::error::Error + Send + Sync>> {
     if let Err(e) = socket.send_to(original_query, upstream_dns).await {

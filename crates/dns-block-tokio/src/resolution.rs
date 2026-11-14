@@ -88,7 +88,7 @@ impl Resolver {
             let start = Instant::now();
 
             let cache_key = CacheKey::from_packet(&request_packet);
-            if self.server_args.caching_enabled
+            if self.server_args.caching_enabled()
                 && let Some(dns_reply) = self
                     .request_cache
                     .write()
@@ -127,7 +127,7 @@ impl Resolver {
             // a DNS response as a raw `DnsPacketBuffer` or an error.
             match relay_query_async(
                 client_packet,
-                &self.server_args.dns_relay,
+                self.server_args.dns_relay,
                 &self.upstream_socket,
             )
             .await
@@ -164,7 +164,7 @@ impl Resolver {
 
                             // todo: record handled response metric
 
-                            if self.server_args.caching_enabled {
+                            if self.server_args.caching_enabled() {
                                 self.request_cache
                                     .write()
                                     .await

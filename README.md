@@ -66,8 +66,8 @@ Options:
   -q, --quiet
           Whether to disable logging
 
-  -c, --caching-enabled
-          DNS response caching is enabled by default and can be explicitly disabled
+      --no-caching
+          DNS response caching is enabled by default, pass this flag to disable it
 
       --benchmark
           Whether benchmark mode is enabled, ie. if forwarding should be skipped and to avoid network calls upstream
@@ -107,8 +107,8 @@ dns-block-tokio \
 
 ### Caching
 
-You can optionally enable caching by passing `--caching-enabled` when running `dns-block-tokio`.
-This will cache the DNS responses from your configured upstream relay based on the lowest time-to-live
+Caching is enabled by default and can be disabled by passing `--no-caching` when running `dns-block-tokio`.
+When enabled, `dns-block-tokio` caches the DNS responses from your configured upstream relay based on the lowest time-to-live
 values across all resource records in the DNS reponse.
 
 ## TODO
