@@ -1,3 +1,4 @@
+mod blocklist;
 mod cache;
 mod cli;
 mod domain_rewrite;
@@ -46,6 +47,8 @@ async fn start_server_with_acceptors(mut server_args: ServerArgs, num_acceptor_t
     server_args
         .blocked_domains
         .extend_from_slice(&external_blocked_domains);
+
+    println!("{:?}", server_args.blocked_domains);
 
     let resolver = Arc::new(Resolver::new(server_args, client_socket, upstream_socket));
 
@@ -140,12 +143,7 @@ async fn resolve_external_blocked_domains(domain_blacklist_uris: &[String]) -> V
     let domains = successful_response_bodies
         .into_iter()
         .flat_map(|(url, body)| {
-            let domains = body
-                .split('\n')
-                // Some blocklists have comments in them and should not be empty
-                .filter(|line| !line.starts_with('#') && line.len() > 3 && line.contains('.'))
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>();
+            let domains = blocklist::parse_blocklist(&body);
 
             println!(
                 "[Debug] Loaded {} blocked domains from {}",
